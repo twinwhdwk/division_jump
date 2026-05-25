@@ -35,6 +35,12 @@ canvas { display:block; }
 </style>
 </head>
 <body>
+<div id="startscreen" style="position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 50% 50%,#0a0820 0%,#000 70%);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:200;">
+  <div style="font-size:clamp(36px,7vw,72px);font-weight:900;color:#ffdd88;text-shadow:0 0 40px #ff8800,0 0 80px #ff4400;text-align:center;margin-bottom:16px;">🏰 분수 계단 탈출 🏃</div>
+  <div style="font-size:clamp(14px,2.5vw,22px);color:#cc8844;text-align:center;margin-bottom:12px;line-height:1.8;">어두운 던전에 갇힌 용사를 구하라!<br>분수의 진실을 밝혀 계단을 올라가자</div>
+  <div style="font-size:clamp(12px,2vw,18px);color:#777;margin-bottom:32px;text-align:center;">⭕ 맞아요 (키 1) &nbsp;|&nbsp; ❌ 틀려요 (키 2)</div>
+  <button onclick="dismissStart()" style="font-size:clamp(18px,3vw,28px);padding:14px 52px;background:linear-gradient(135deg,#cc6600,#ff9900);border:none;border-radius:50px;color:#fff;font-weight:900;cursor:pointer;letter-spacing:2px;box-shadow:0 0 40px #ff880088;transition:transform .2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">▶ 던전 입장!</button>
+</div>
 <div id="ui">관문 <span id="snum">1</span>/5 &nbsp;|&nbsp; ❤️ <span id="slives">3</span></div>
 <canvas id="c" width="800" height="500"></canvas>
 <div id="hint">키보드 <strong style="color:#ffdd88">1</strong> = ⭕ 맞아요 &nbsp;|&nbsp; <strong style="color:#ffdd88">2</strong> = ❌ 틀려요</div>
@@ -53,6 +59,115 @@ canvas { display:block; }
 </div>
 
 <script>
+// 시작화면 닫기
+function dismissStart() {
+  document.getElementById('startscreen').style.display = 'none';
+  initAudio();
+}
+
+// ── 오디오 시스템 ──
+let _ac = null;
+function initAudio() {
+  if (_ac) return;
+  try { _ac = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+}
+
+function _note(freq, type, vol, t, dur) {
+  if (!_ac) return;
+  const o = _ac.createOscillator(), g = _ac.createGain();
+  o.type = type; o.frequency.value = freq;
+  o.connect(g); g.connect(_ac.destination);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vol, t + Math.min(0.04, dur * 0.3));
+  g.gain.setValueAtTime(vol, t + dur * 0.7);
+  g.gain.linearRampToValueAtTime(0, t + dur);
+  o.start(t); o.stop(t + dur + 0.01);
+}
+
+function playJump() {
+  if (!_ac) return;
+  const t = _ac.currentTime;
+  _note(330, 'sine', 0.18, t, 0.06);
+  _note(440, 'sine', 0.14, t + 0.06, 0.08);
+  _note(523, 'sine', 0.10, t + 0.12, 0.10);
+}
+
+function playCorrectSound() {
+  if (!_ac) return;
+  const t = _ac.currentTime;
+  [[523,0],[659,0.09],[784,0.18],[1047,0.30]].forEach(([f,d])=>_note(f,'sine',0.22,t+d,0.18));
+  _note(1319, 'triangle', 0.10, t + 0.44, 0.28);
+}
+
+function playWrongSound() {
+  if (!_ac) return;
+  const t = _ac.currentTime;
+  const o = _ac.createOscillator(), g = _ac.createGain();
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(300, t);
+  o.frequency.exponentialRampToValueAtTime(80, t + 0.35);
+  o.connect(g); g.connect(_ac.destination);
+  g.gain.setValueAtTime(0.28, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+  o.start(t); o.stop(t + 0.40);
+}
+
+function playStageClear() {
+  if (!_ac) return;
+  const t = _ac.currentTime;
+  [[523,0.12],[659,0.12],[784,0.12],[1047,0.22],[784,0.12],[659,0.12],[1047,0.48]].forEach(([f,d],i,arr)=>{
+    let ct=t; arr.slice(0,i).forEach(([,dd])=>ct+=dd+0.03);
+    _note(f,'square',0.18,ct,d);
+    _note(f*1.5,'sine',0.08,ct,d);
+  });
+}
+
+// ── 파티클 시스템 ──
+const _parts = [];
+function spawnConfetti(x, y, count, colors) {
+  for (let i = 0; i < count; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const spd = 2 + Math.random() * 5;
+    _parts.push({
+      x, y,
+      vx: Math.cos(ang) * spd,
+      vy: Math.sin(ang) * spd - 2,
+      r: 3 + Math.random() * 4,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      life: 1,
+      decay: 0.018 + Math.random() * 0.012,
+      isStar: Math.random() < 0.4,
+    });
+  }
+}
+
+function updateParticles() {
+  for (let i = _parts.length - 1; i >= 0; i--) {
+    const p = _parts[i];
+    p.x += p.vx; p.y += p.vy;
+    p.vy += 0.14; p.vx *= 0.97;
+    p.life -= p.decay;
+    if (p.life <= 0) { _parts.splice(i, 1); continue; }
+    ctx.save();
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    if (p.isStar) {
+      ctx.shadowBlur = 12; ctx.shadowColor = p.color;
+      ctx.beginPath();
+      for (let k = 0; k < 10; k++) {
+        const a = k * Math.PI / 5 - Math.PI / 2;
+        const r2 = k % 2 === 0 ? p.r : p.r * 0.4;
+        k === 0 ? ctx.moveTo(Math.cos(a)*r2+p.x, Math.sin(a)*r2+p.y)
+                : ctx.lineTo(Math.cos(a)*r2+p.x, Math.sin(a)*r2+p.y);
+      }
+      ctx.closePath(); ctx.fill();
+    } else {
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 const W = 800, H = 500;
@@ -222,12 +337,14 @@ function showNextQ() {
 function answer(userTrue) {
   document.getElementById('qbox').style.display='none';
   const correct = userTrue===currentQ.a;
-  showFlash(correct?'⭕':'❌');
+  showFlash(correct ? '⭕' : '❌');
+  if (correct) playCorrectSound(); else playWrongSound();
   doJump(correct);
 }
 
 function doJump(correct) {
   gstate='jumping';
+  playJump();
   const from=stairs[playerPos];
   const to=stairs[playerPos+1];
   jumpAnim={
@@ -238,6 +355,7 @@ function doJump(correct) {
       jumpAnim=null;
       if(correct){
         to.revealed=true;
+        spawnConfetti(to.x, to.y - 10, 28, ['#FFD700','#FF8800','#FFFFFF','#00FF88','#FF4444']);
         playerPos++;
         gstate='playing';
         scheduleQ();
@@ -250,6 +368,14 @@ function doJump(correct) {
     }
   };
 }
+
+// ── 시작화면 키보드 닫기 ──
+document.addEventListener('keydown', function startDismiss(e) {
+  if (document.getElementById('startscreen').style.display !== 'none') {
+    dismissStart();
+    document.removeEventListener('keydown', startDismiss);
+  }
+}, { capture: false });
 
 // ── 키 입력: 1 = ⭕, 2 = ❌ ──
 document.addEventListener('keydown',e=>{
@@ -274,6 +400,7 @@ function respawn(){
 
 // ── 관문 클리어 ──
 function showClear(){
+  playStageClear();
   gstate='clear';
   document.getElementById('sc-title').textContent=`🎉 ${stage}관문 통과!`;
   document.getElementById('sc-msg').textContent=stage<5?`다음은 ${stage+1}관문!`:'모든 관문 클리어! 🏆';
@@ -489,6 +616,7 @@ function render(){
   drawPlayer();
   drawBats();
   drawSnakes();
+  updateParticles();
 
   ctx.restore();
   drawImpact();
