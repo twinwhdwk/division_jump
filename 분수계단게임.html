@@ -2,64 +2,150 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>분수 계단 탈출</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:#000; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:'맑은 고딕',sans-serif; overflow:hidden; user-select:none; }
-canvas { display:block; }
-#ui { position:fixed; top:10px; left:50%; transform:translateX(-50%); color:#ffdd88; font-size:18px; text-align:center; text-shadow:0 0 10px #ff8800; pointer-events:none; }
-#hint { position:fixed; bottom:10px; left:50%; transform:translateX(-50%); color:#666; font-size:13px; pointer-events:none; }
+canvas { display:block; max-width:100%; max-height:100vh; }
+#ui { position:fixed; top:10px; left:50%; transform:translateX(-50%); color:#ffdd88; font-size:18px; text-align:center; text-shadow:0 0 10px #ff8800; pointer-events:none; white-space:nowrap; }
+#hint { position:fixed; bottom:10px; left:50%; transform:translateX(-50%); color:#666; font-size:13px; pointer-events:none; text-align:center; }
 #qbox {
   display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
   background:rgba(8,6,18,0.97); border:3px solid #cc6600;
-  border-radius:18px; padding:30px 44px; text-align:center;
-  box-shadow:0 0 50px #ff660055, 0 0 20px #ff440033; z-index:100; min-width:400px;
+  border-radius:18px; padding:26px 36px; text-align:center;
+  box-shadow:0 0 50px #ff660055, 0 0 20px #ff440033; z-index:100;
+  min-width:min(400px, 90vw); max-width:92vw;
 }
 #qbox h2 { color:#ffcc66; font-size:22px; margin-bottom:10px; }
-#qtext { color:#fff; font-size:24px; font-weight:bold; margin-bottom:22px; line-height:1.5; }
-#qkeys { color:#aaa; font-size:16px; margin-bottom:6px; }
+#qtext { color:#fff; font-size:clamp(16px,3vw,24px); font-weight:bold; margin-bottom:18px; line-height:1.5; }
+#qkeys { color:#aaa; font-size:14px; margin-bottom:14px; }
 #qkeys span { color:#ffdd88; font-weight:bold; }
+.answer-btns { display:flex; gap:16px; justify-content:center; margin-top:4px; }
+.answer-btns button {
+  flex:1; max-width:160px;
+  font-size:clamp(18px,4vw,28px); padding:14px 0;
+  border:none; border-radius:14px; cursor:pointer;
+  font-weight:900; letter-spacing:1px;
+  transition:transform .1s, box-shadow .1s;
+  box-shadow:0 4px 18px #0008;
+}
+.answer-btns button:active { transform:scale(0.94); }
+#btn-true  { background:linear-gradient(135deg,#1a7a2a,#2ecc40); color:#fff; text-shadow:0 2px 6px #00000066; }
+#btn-false { background:linear-gradient(135deg,#8a1a1a,#e74c3c); color:#fff; text-shadow:0 2px 6px #00000066; }
+#btn-true:hover  { box-shadow:0 0 24px #2ecc4066; }
+#btn-false:hover { box-shadow:0 0 24px #e74c3c66; }
 #flash {
   display:none; position:fixed; top:38%; left:50%; transform:translate(-50%,-50%);
   font-size:120px; z-index:300; pointer-events:none;
 }
+#combo-display {
+  display:none; position:fixed; top:55px; left:50%; transform:translateX(-50%);
+  color:#FFD700; font-size:22px; font-weight:900;
+  text-shadow:0 0 20px #ff8800; pointer-events:none;
+  animation:comboAnim .3s ease-out;
+}
+@keyframes comboAnim { from{transform:translateX(-50%) scale(1.6)} to{transform:translateX(-50%) scale(1)} }
 #stageclear {
   display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
   background:rgba(8,6,18,0.97); border:3px solid #ffcc00;
   border-radius:18px; padding:30px 48px; text-align:center;
   box-shadow:0 0 50px #ffcc0055; z-index:100; color:#ffdd88;
+  min-width:min(360px,88vw);
 }
-#stageclear h2 { font-size:34px; margin-bottom:10px; }
+#stageclear h2 { font-size:34px; margin-bottom:8px; }
+#stageclear .sc-score { font-size:17px; color:#ffaa44; margin-bottom:6px; }
 #stageclear p { font-size:17px; color:#999; margin-bottom:20px; }
 #stageclear button { font-size:19px; padding:11px 34px; background:#cc6600; border:none; border-radius:10px; color:#fff; cursor:pointer; font-weight:bold; }
+#explanation {
+  display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+  background:rgba(10,4,20,0.98); border:3px solid #aa3333;
+  border-radius:18px; padding:28px 40px; text-align:center;
+  box-shadow:0 0 50px #ff000044; z-index:150;
+  min-width:min(380px,88vw); max-width:90vw;
+}
+#explanation h3 { color:#ff6666; font-size:22px; margin-bottom:12px; }
+#explanation .exp-q { color:#ccc; font-size:16px; margin-bottom:8px; line-height:1.5; }
+#explanation .exp-ans { color:#66ff88; font-size:20px; font-weight:bold; margin-bottom:16px; }
+#explanation .exp-btn { font-size:17px; padding:10px 30px; background:#551111; border:2px solid #aa3333; border-radius:10px; color:#ff9999; cursor:pointer; font-weight:bold; transition:background .2s; }
+#explanation .exp-btn:hover { background:#771111; }
+#gameover {
+  display:none; position:fixed; top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.92); z-index:200;
+  display:none; flex-direction:column; align-items:center; justify-content:center;
+}
+#gameover h2 { font-size:clamp(40px,8vw,72px); color:#cc2222; text-shadow:0 0 40px #ff0000; margin-bottom:16px; }
+#gameover .go-score { font-size:22px; color:#ffaa44; margin-bottom:12px; }
+#gameover p { font-size:18px; color:#888; margin-bottom:32px; }
+#gameover button { font-size:22px; padding:14px 48px; background:linear-gradient(135deg,#cc2200,#ff4400); border:none; border-radius:50px; color:#fff; cursor:pointer; font-weight:900; box-shadow:0 0 30px #ff440066; letter-spacing:1px; transition:transform .15s; }
+#gameover button:hover { transform:scale(1.07); }
+#finalclear {
+  display:none; position:fixed; top:0;left:0;right:0;bottom:0;
+  background:radial-gradient(ellipse at 50% 40%,#0a0830 0%,#000 80%);
+  z-index:200; flex-direction:column; align-items:center; justify-content:center;
+}
+#finalclear h1 { font-size:clamp(36px,7vw,64px); color:#FFD700; text-shadow:0 0 60px #FFD700,0 0 120px #ff8800; text-align:center; margin-bottom:12px; }
+#finalclear .fc-sub { font-size:clamp(16px,3vw,26px); color:#ffcc66; margin-bottom:10px; text-align:center; }
+#finalclear .fc-score { font-size:clamp(20px,4vw,34px); color:#00ffaa; font-weight:900; margin-bottom:28px; text-shadow:0 0 20px #00ffaa88; }
+#finalclear button { font-size:22px; padding:14px 52px; background:linear-gradient(135deg,#cc6600,#ffaa00); border:none; border-radius:50px; color:#fff; font-weight:900; cursor:pointer; letter-spacing:2px; box-shadow:0 0 50px #ffaa0088; transition:transform .2s; }
+#finalclear button:hover { transform:scale(1.08); }
 </style>
 </head>
 <body>
-<div id="startscreen" style="position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 50% 50%,#0a0820 0%,#000 70%);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:200;">
-  <div style="font-size:clamp(36px,7vw,72px);font-weight:900;color:#ffdd88;text-shadow:0 0 40px #ff8800,0 0 80px #ff4400;text-align:center;margin-bottom:16px;">🏰 분수 계단 탈출 🏃</div>
-  <div style="font-size:clamp(14px,2.5vw,22px);color:#cc8844;text-align:center;margin-bottom:12px;line-height:1.8;">어두운 던전에 갇힌 용사를 구하라!<br>분수의 진실을 밝혀 계단을 올라가자</div>
-  <div style="font-size:clamp(12px,2vw,18px);color:#777;margin-bottom:32px;text-align:center;">⭕ 맞아요 (키 1) &nbsp;|&nbsp; ❌ 틀려요 (키 2)</div>
+<div id="startscreen" style="position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 50% 50%,#0a0820 0%,#000 70%);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:200;padding:20px;">
+  <div style="font-size:clamp(30px,7vw,72px);font-weight:900;color:#ffdd88;text-shadow:0 0 40px #ff8800,0 0 80px #ff4400;text-align:center;margin-bottom:16px;">🏰 분수 계단 탈출 🏃</div>
+  <div style="font-size:clamp(13px,2.5vw,22px);color:#cc8844;text-align:center;margin-bottom:12px;line-height:1.8;">어두운 던전에 갇힌 용사를 구하라!<br>분수의 진실을 밝혀 계단을 올라가자</div>
+  <div style="font-size:clamp(11px,2vw,17px);color:#777;margin-bottom:32px;text-align:center;">⭕ 맞아요 (키 1 또는 버튼) &nbsp;|&nbsp; ❌ 틀려요 (키 2 또는 버튼)</div>
   <button onclick="dismissStart()" style="font-size:clamp(18px,3vw,28px);padding:14px 52px;background:linear-gradient(135deg,#cc6600,#ff9900);border:none;border-radius:50px;color:#fff;font-weight:900;cursor:pointer;letter-spacing:2px;box-shadow:0 0 40px #ff880088;transition:transform .2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">▶ 던전 입장!</button>
 </div>
-<div id="ui">관문 <span id="snum">1</span>/5 &nbsp;|&nbsp; ❤️ <span id="slives">3</span></div>
+
+<div id="ui">관문 <span id="snum">1</span>/5 &nbsp;|&nbsp; <span id="hearts">❤️❤️❤️</span> &nbsp;|&nbsp; 점수 <span id="scoreui">0</span></div>
 <canvas id="c" width="800" height="500"></canvas>
-<div id="hint">키보드 <strong style="color:#ffdd88">1</strong> = ⭕ 맞아요 &nbsp;|&nbsp; <strong style="color:#ffdd88">2</strong> = ❌ 틀려요</div>
+<div id="hint">키보드 <strong style="color:#ffdd88">1</strong> = ⭕ 맞아요 &nbsp;|&nbsp; <strong style="color:#ffdd88">2</strong> = ❌ 틀려요 &nbsp;|&nbsp; 또는 버튼 클릭</div>
+<div id="combo-display"></div>
 
 <div id="qbox">
   <h2 id="qtitle">🔥 분수 문제 🔥</h2>
   <div id="qdots" style="display:none; font-size:22px; letter-spacing:8px; margin-bottom:10px;"></div>
   <div id="qtext"></div>
-  <div id="qkeys">키보드 <span>1</span> = ⭕ 맞아요 &nbsp;&nbsp;&nbsp; 키보드 <span>2</span> = ❌ 틀려요</div>
+  <div id="qkeys">키보드 <span>1</span> = ⭕ &nbsp;&nbsp; 키보드 <span>2</span> = ❌</div>
+  <div class="answer-btns">
+    <button id="btn-true"  onclick="answer(true)">⭕ 맞아요</button>
+    <button id="btn-false" onclick="answer(false)">❌ 틀려요</button>
+  </div>
 </div>
+
 <div id="flash"></div>
+
+<div id="explanation">
+  <h3>❌ 틀렸어요!</h3>
+  <div class="exp-q" id="exp-question"></div>
+  <div class="exp-ans" id="exp-answer"></div>
+  <button class="exp-btn" onclick="closeExplanation()">알겠어요! 계속 →</button>
+</div>
+
 <div id="stageclear">
   <h2 id="sc-title"></h2>
+  <div class="sc-score" id="sc-score"></div>
   <p id="sc-msg"></p>
   <button id="sc-btn">다음 관문 →</button>
 </div>
 
+<div id="gameover">
+  <h2>💀 게임 오버 💀</h2>
+  <div class="go-score" id="go-score"></div>
+  <p>용사가 던전에서 쓰러졌습니다...</p>
+  <button onclick="restartGame()">🔄 다시 도전!</button>
+</div>
+
+<div id="finalclear">
+  <h1>🏆 모든 관문 클리어! 🏆</h1>
+  <div class="fc-sub">분수의 던전을 완전히 정복했습니다!</div>
+  <div class="fc-score" id="fc-score"></div>
+  <button onclick="restartGame()">🔄 처음부터 다시!</button>
+</div>
+
 <script>
-// 시작화면 닫기
 function dismissStart() {
   document.getElementById('startscreen').style.display = 'none';
   initAudio();
@@ -99,6 +185,15 @@ function playCorrectSound() {
   _note(1319, 'triangle', 0.10, t + 0.44, 0.28);
 }
 
+function playComboSound(combo) {
+  if (!_ac) return;
+  const t = _ac.currentTime;
+  const base = 440 + combo * 60;
+  _note(base, 'sine', 0.25, t, 0.12);
+  _note(base * 1.25, 'sine', 0.20, t + 0.10, 0.14);
+  _note(base * 1.5, 'triangle', 0.18, t + 0.22, 0.18);
+}
+
 function playWrongSound() {
   if (!_ac) return;
   const t = _ac.currentTime;
@@ -122,6 +217,18 @@ function playStageClear() {
   });
 }
 
+function playFinalClear() {
+  if (!_ac) return;
+  const t = _ac.currentTime;
+  const melody = [[523,0.1],[659,0.1],[784,0.1],[1047,0.15],[880,0.1],[1047,0.1],[1319,0.25],[1047,0.1],[1175,0.1],[1319,0.4]];
+  let cur = t;
+  melody.forEach(([f,d])=>{
+    _note(f,'square',0.18,cur,d);
+    _note(f*2,'sine',0.06,cur,d);
+    cur += d + 0.02;
+  });
+}
+
 // ── 파티클 시스템 ──
 const _parts = [];
 function spawnConfetti(x, y, count, colors) {
@@ -137,6 +244,23 @@ function spawnConfetti(x, y, count, colors) {
       life: 1,
       decay: 0.018 + Math.random() * 0.012,
       isStar: Math.random() < 0.4,
+    });
+  }
+}
+
+function spawnBigConfetti() {
+  const colors = ['#FFD700','#FF8800','#FF4444','#00FF88','#44AAFF','#FF44CC','#FFFFFF'];
+  for (let i = 0; i < 80; i++) {
+    _parts.push({
+      x: Math.random() * W,
+      y: -10,
+      vx: (Math.random() - 0.5) * 4,
+      vy: 2 + Math.random() * 4,
+      r: 4 + Math.random() * 6,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      life: 1,
+      decay: 0.006 + Math.random() * 0.008,
+      isStar: Math.random() < 0.5,
     });
   }
 }
@@ -174,19 +298,21 @@ const W = 800, H = 500;
 
 // ── 상태 ──
 let stage = 1, lives = 3;
-// playing | question | jumping | falling | impact | dead | clear | gameover
+let score = 0, combo = 0, totalCorrect = 0;
+// playing | question | jumping | falling | impact | dead | clear | gameover | explanation
 let gstate = 'playing';
 let playerPos = 0;
-let stairs = []; // {x,y,revealed}
+let stairs = [];
 let currentQ = null;
-let jumpAnim = null;  // {fromX,fromY,toX,toY,t,dur,onDone}
-let fallAnim = null;  // {x,y,vy,vx,rot,rotV}
-let impactAnim = null; // {t,maxT}
-let shakeAnim = null;  // {intensity,t,maxT}
+let jumpAnim = null;
+let fallAnim = null;
+let impactAnim = null;
+let shakeAnim = null;
 let bats = [], snakes = [];
 let torchFlicker = 0;
+let finalClearTimer = 0;
 
-// ── 관문별 문제 풀 (각 10문제, 관문마다 5개 랜덤 선택) ──
+// ── 관문별 문제 풀 ──
 const gatePools = [
   // 관문 1 — 분수의 기본 의미
   [
@@ -261,7 +387,7 @@ const gatePools = [
   ],
 ];
 
-let stageQs = []; // 현재 관문에서 쓸 5문제
+let stageQs = [];
 
 function shuffle(arr) {
   const a=[...arr];
@@ -291,20 +417,42 @@ function playBoom() {
   } catch(e){}
 }
 
+// ── UI 업데이트 ──
+function updateHeartsUI() {
+  const full = '❤️'.repeat(lives);
+  const empty = '🖤'.repeat(Math.max(0, 3 - lives));
+  document.getElementById('hearts').textContent = full + empty;
+}
+
+function updateScoreUI() {
+  document.getElementById('scoreui').textContent = score;
+}
+
+function showCombo(n) {
+  if (n < 2) return;
+  const el = document.getElementById('combo-display');
+  el.textContent = `🔥 ${n} 콤보! +${n * 10}점`;
+  el.style.display = 'block';
+  el.style.animation = 'none';
+  void el.offsetWidth;
+  el.style.animation = 'comboAnim .3s ease-out';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.style.display = 'none', 1400);
+}
+
 // ── 스테이지 생성 ──
 function buildStage(s) {
   stairs=[];
-  // 항상 계단 5개 (0~5 = 인덱스 6개 = 점프 5번 = 문제 5개)
   for(let i=0;i<=5;i++) stairs.push({x:90+i*100, y:430-i*48, revealed:i===0});
   playerPos=0;
   jumpAnim=null; fallAnim=null; impactAnim=null; shakeAnim=null;
+  combo = 0;
   bats=Array.from({length:4},()=>({
     x:180+Math.random()*520, y:40+Math.random()*160,
     dx:(Math.random()-0.5)*1.8, dy:(Math.random()-0.5)*1, t:0
   }));
   snakes=[];
   if(s>=3) snakes.push({visible:false,timer:80+Math.random()*120});
-  // 이번 관문에서 쓸 5문제: 해당 풀에서 셔플 후 5개 선택
   stageQs = shuffle(gatePools[s-1]).slice(0,5);
   scheduleQ();
 }
@@ -315,10 +463,9 @@ function scheduleQ() {
 }
 
 function showNextQ() {
-  currentQ = stageQs[playerPos]; // playerPos 번째 문제
+  currentQ = stageQs[playerPos];
   gstate = 'question';
 
-  // 진행 도트: 항상 표시
   document.getElementById('qdots').innerHTML = stageQs.map((_,i)=>{
     if(i < playerPos) return '<span style="color:#2ecc40">●</span>';
     if(i === playerPos) return '<span style="color:#ffdd88">●</span>';
@@ -328,18 +475,34 @@ function showNextQ() {
 
   const labels = ['🔥 분수 문제','🔥 분수 문제','🌟 문장 문제','🔢 계산 문제','⚔️ 심화 문제'];
   document.getElementById('qtitle').textContent = labels[stage-1];
-
   document.getElementById('qtext').textContent = currentQ.q;
   document.getElementById('qbox').style.display='block';
 }
 
 // ── 답변 ──
 function answer(userTrue) {
+  if (gstate !== 'question') return;
   document.getElementById('qbox').style.display='none';
   const correct = userTrue===currentQ.a;
   showFlash(correct ? '⭕' : '❌');
-  if (correct) playCorrectSound(); else playWrongSound();
-  doJump(correct);
+  if (correct) {
+    combo++;
+    totalCorrect++;
+    const points = 100 + (combo - 1) * 10;
+    score += points;
+    updateScoreUI();
+    if (combo >= 2) {
+      showCombo(combo);
+      playComboSound(combo);
+    } else {
+      playCorrectSound();
+    }
+    doJump(true);
+  } else {
+    combo = 0;
+    playWrongSound();
+    doJump(false);
+  }
 }
 
 function doJump(correct) {
@@ -351,6 +514,7 @@ function doJump(correct) {
     fromX:from.x, fromY:from.y-34,
     toX:to.x, toY:to.y-34,
     t:0, dur:28,
+    correct,
     onDone:()=>{
       jumpAnim=null;
       if(correct){
@@ -360,13 +524,30 @@ function doJump(correct) {
         gstate='playing';
         scheduleQ();
       } else {
+        showExplanation();
         gstate='falling';
         fallAnim={x:to.x, y:to.y-34, vy:-1, vx:(Math.random()-0.5)*3, rot:0, rotV:(Math.random()>0.5?1:-1)*0.18};
         lives--;
-        document.getElementById('slives').textContent=lives;
+        updateHeartsUI();
       }
     }
   };
+}
+
+function showExplanation() {
+  const ans = currentQ.a ? '⭕ 맞아요!' : '❌ 틀려요!';
+  document.getElementById('exp-question').textContent = `"${currentQ.q}"`;
+  document.getElementById('exp-answer').textContent = `정답: ${ans}`;
+  document.getElementById('explanation').style.display = 'block';
+  gstate = 'explanation';
+}
+
+function closeExplanation() {
+  document.getElementById('explanation').style.display = 'none';
+  // fallAnim이 끝난 경우 respawn 처리 (impact가 끝날 때까지 기다림)
+  if (gstate === 'explanation') {
+    gstate = 'falling';
+  }
 }
 
 // ── 시작화면 키보드 닫기 ──
@@ -377,11 +558,13 @@ document.addEventListener('keydown', function startDismiss(e) {
   }
 }, { capture: false });
 
-// ── 키 입력: 1 = ⭕, 2 = ❌ ──
+// ── 키 입력 ──
 document.addEventListener('keydown',e=>{
-  if(gstate!=='question') return;
   if(e.key==='1'){ e.preventDefault(); answer(true); }
   else if(e.key==='2'){ e.preventDefault(); answer(false); }
+  else if(e.key==='Enter'||e.key===' '){
+    if(gstate==='explanation') closeExplanation();
+  }
 });
 
 // ── 플래시 ──
@@ -392,23 +575,44 @@ function showFlash(txt){
   el._t=setTimeout(()=>el.style.display='none',700);
 }
 
-// ── 리스폰 ──
-function respawn(){
-  buildStage(stage);
+// ── 재시작 ──
+function restartGame() {
+  stage=1; lives=3; score=0; combo=0; totalCorrect=0;
+  document.getElementById('snum').textContent=1;
+  updateHeartsUI();
+  updateScoreUI();
+  document.getElementById('gameover').style.display='none';
+  document.getElementById('finalclear').style.display='none';
+  document.getElementById('stageclear').style.display='none';
+  finalClearTimer=0;
+  _parts.length=0;
+  buildStage(1);
   gstate='playing';
 }
 
 // ── 관문 클리어 ──
 function showClear(){
   playStageClear();
+  spawnConfetti(W/2, H/2, 50, ['#FFD700','#FF8800','#FFFFFF','#00FF88','#FF4444']);
   gstate='clear';
+
+  if (stage >= 5) {
+    playFinalClear();
+    finalClearTimer = 0;
+    document.getElementById('fc-score').textContent = `총 점수: ${score}점 · 정답: ${totalCorrect}/25`;
+    document.getElementById('finalclear').style.display = 'flex';
+    return;
+  }
+
   document.getElementById('sc-title').textContent=`🎉 ${stage}관문 통과!`;
-  document.getElementById('sc-msg').textContent=stage<5?`다음은 ${stage+1}관문!`:'모든 관문 클리어! 🏆';
+  document.getElementById('sc-score').textContent=`점수: ${score}점`;
+  document.getElementById('sc-msg').textContent=`다음은 ${stage+1}관문!`;
   const btn=document.getElementById('sc-btn');
-  btn.textContent=stage>=5?'🏆 게임 완료!':'다음 관문 →';
-  btn.onclick=stage>=5?()=>{document.getElementById('stageclear').style.display='none';}:nextStage;
+  btn.textContent='다음 관문 →';
+  btn.onclick=nextStage;
   document.getElementById('stageclear').style.display='block';
 }
+
 function nextStage(){
   document.getElementById('stageclear').style.display='none';
   if(stage<5){ stage++; document.getElementById('snum').textContent=stage; buildStage(stage); gstate='playing'; }
@@ -417,19 +621,18 @@ function nextStage(){
 // ── 게임 오버 ──
 function gameOver(){
   gstate='gameover';
-  setTimeout(()=>{
-    ctx.fillStyle='rgba(0,0,0,0.9)'; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#cc2222'; ctx.font='bold 60px sans-serif'; ctx.textAlign='center';
-    ctx.fillText('💀 게임 오버 💀',400,230);
-    ctx.fillStyle='#888'; ctx.font='22px sans-serif';
-    ctx.fillText('새로고침하면 다시 시작!',400,290);
-    ctx.textAlign='left';
-  },300);
+  document.getElementById('go-score').textContent=`점수: ${score}점 · 정답: ${totalCorrect}개`;
+  document.getElementById('gameover').style.display='flex';
 }
 
 // ── 업데이트 ──
 function update(){
   torchFlicker++;
+
+  if (gstate === 'finalclear' || document.getElementById('finalclear').style.display === 'flex') {
+    finalClearTimer++;
+    if (finalClearTimer % 18 === 0) spawnBigConfetti();
+  }
 
   for(const b of bats){
     b.x+=b.dx; b.y+=b.dy; b.t++;
@@ -446,18 +649,17 @@ function update(){
     if(jumpAnim.t>=jumpAnim.dur){ jumpAnim.onDone(); }
   }
 
-  if(fallAnim){
+  if(fallAnim && gstate !== 'explanation'){
     fallAnim.vy+=2;
     fallAnim.y+=fallAnim.vy;
     fallAnim.x+=fallAnim.vx;
     fallAnim.rot+=fallAnim.rotV;
     if(fallAnim.y>H+60){
       fallAnim=null;
-      // 충돌 임팩트
       playBoom();
       impactAnim={t:0,maxT:70};
       shakeAnim={intensity:28,t:0,maxT:45};
-      gstate='impact';
+      if (gstate !== 'explanation') gstate='impact';
     }
   }
 
@@ -465,7 +667,11 @@ function update(){
     impactAnim.t++;
     if(impactAnim.t>=impactAnim.maxT){
       impactAnim=null;
-      if(lives<=0) gameOver(); else respawn();
+      if (gstate === 'explanation') return;
+      if(lives<=0) gameOver(); else {
+        buildStage(stage);
+        gstate='playing';
+      }
     }
   }
   if(shakeAnim){
@@ -480,13 +686,11 @@ function drawBg(){
   g.addColorStop(0,'#030307'); g.addColorStop(1,'#09091a');
   ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
 
-  // 종유석
   ctx.fillStyle='#0c0c1c';
   for(let i=0;i<12;i++){
     const bx=30+i*67, bh=24+Math.sin(i*2.1+0.5)*20;
     ctx.beginPath(); ctx.moveTo(bx-12,0); ctx.lineTo(bx+12,0); ctx.lineTo(bx,bh); ctx.closePath(); ctx.fill();
   }
-  // 동굴 바닥 어둠
   const gFloor=ctx.createLinearGradient(0,H-60,0,H);
   gFloor.addColorStop(0,'rgba(0,0,0,0)'); gFloor.addColorStop(1,'rgba(0,0,0,1)');
   ctx.fillStyle=gFloor; ctx.fillRect(0,H-60,W,60);
@@ -504,13 +708,18 @@ function drawStair(st, idx){
   ctx.fillStyle='#261608';
   ctx.fillRect(st.x-44,st.y+18,88,8);
 
-  // 횃불
   ctx.font='18px serif';
   ctx.fillText('🔥',st.x-9+flicker,st.y-5);
+
+  // 계단 번호
+  ctx.fillStyle='rgba(255,200,100,0.5)';
+  ctx.font='11px sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText(idx===0?'시작':`${idx}번`, st.x, st.y+14);
+  ctx.textAlign='left';
 }
 
 function drawFog(){
-  // 앞 계단은 안개로 가림
   for(let i=playerPos+1;i<stairs.length;i++){
     const st=stairs[i];
     const gr=ctx.createRadialGradient(st.x,st.y+10,0,st.x,st.y+10,80);
@@ -554,22 +763,27 @@ function drawSnakes(){
     const target=stairs[Math.min(playerPos+1,stairs.length-1)];
     ctx.font='24px serif';
     ctx.fillText('🐍',target.x-12,target.y-34);
+    // 경고 텍스트
+    ctx.save();
+    ctx.fillStyle=`rgba(255,80,80,${0.5+0.5*Math.sin(torchFlicker*0.15)})`;
+    ctx.font='bold 13px sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('⚠️ 위험!', target.x, target.y-52);
+    ctx.textAlign='left';
+    ctx.restore();
   }
 }
 
 function drawImpact(){
   if(!impactAnim) return;
   const t=impactAnim.t/impactAnim.maxT;
-  // 빨간 플래시
   const alpha = t<0.25 ? t/0.25 : 1-(t-0.25)/0.75;
   ctx.fillStyle=`rgba(220,20,20,${alpha*0.75})`;
   ctx.fillRect(0,0,W,H);
-  // 흰 플래시 (첫 순간)
   if(t<0.15){
     ctx.fillStyle=`rgba(255,255,255,${(0.15-t)/0.15*0.8})`;
     ctx.fillRect(0,0,W,H);
   }
-  // 쿵 텍스트
   if(t<0.5){
     const scale=1+Math.sin(t*Math.PI)*0.4;
     const falpha=(0.5-t)/0.5;
@@ -583,7 +797,6 @@ function drawImpact(){
     ctx.textAlign='left';
     ctx.restore();
   }
-  // 균열 선
   if(t<0.4){
     ctx.strokeStyle=`rgba(255,100,0,${(0.4-t)/0.4*0.9})`;
     ctx.lineWidth=3;
@@ -600,7 +813,6 @@ function drawImpact(){
 }
 
 function render(){
-  // 화면 흔들기
   let sx=0,sy=0;
   if(shakeAnim){
     const intensity=shakeAnim.intensity*(1-shakeAnim.t/shakeAnim.maxT);
@@ -613,7 +825,7 @@ function render(){
   drawBg();
   for(let i=0;i<=playerPos;i++) drawStair(stairs[i],i);
   drawFog();
-  drawPlayer();
+  if (fallAnim || (gstate !== 'explanation')) drawPlayer();
   drawBats();
   drawSnakes();
   updateParticles();
@@ -623,6 +835,7 @@ function render(){
 }
 
 // ── 메인 루프 ──
+updateHeartsUI();
 buildStage(1);
 (function loop(){
   update();
