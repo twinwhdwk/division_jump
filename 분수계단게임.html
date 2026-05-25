@@ -111,7 +111,8 @@ canvas { display:block; max-width:100%; max-height:100vh; }
 </div>
 
 <div id="ui">관문 <span id="snum">1</span>/5 &nbsp;|&nbsp; <span id="hearts">❤️❤️❤️</span> &nbsp;|&nbsp; 점수 <span id="scoreui">0</span></div>
-<div id="hiscore-badge">최고: <span id="hiscore-val">0</span>점</div>
+<div id="bgm-mute-btn" onclick="toggleBGMMute()" style="position:fixed;top:10px;right:14px;font-size:18px;cursor:pointer;color:#ffdd88;padding:4px 8px;background:rgba(0,0,0,0.5);border-radius:6px;z-index:400;">🔊</div>
+<div id="hiscore-badge" style="position:fixed;top:40px;right:14px;color:#aaa;font-size:13px;pointer-events:none;text-shadow:none;">최고: <span id="hiscore-val">0</span>점</div>
 <canvas id="c" width="800" height="500"></canvas>
 <div id="stage-intro">
   <div class="si-gate" id="si-gate-text"></div>
@@ -167,6 +168,7 @@ canvas { display:block; max-width:100%; max-height:100vh; }
 function dismissStart() {
   document.getElementById('startscreen').style.display = 'none';
   initAudio();
+  setTimeout(() => startBGM(), 100);
 }
 
 // ── 오디오 시스템 ──
@@ -174,6 +176,95 @@ let _ac = null;
 function initAudio() {
   if (_ac) return;
   try { _ac = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+}
+
+
+// ── BGM ──
+let _bgmNodes = [];
+let _bgmTid = null;
+let _bgmMuted = false;
+
+function startBGM() {
+  stopBGM();
+  if (!_ac) return;
+  
+  // 저음 드론 (던전 분위기)
+  const drone = _ac.createOscillator();
+  const droneGain = _ac.createGain();
+  drone.type = 'sine';
+  drone.frequency.value = 55;
+  droneGain.gain.value = _bgmMuted ? 0 : 0.05;
+  drone.connect(droneGain);
+  droneGain.connect(_ac.destination);
+  drone.start();
+  _bgmNodes.push(drone, droneGain);
+  
+  // 두 번째 드론 (5도 위)
+  const drone2 = _ac.createOscillator();
+  const droneGain2 = _ac.createGain();
+  drone2.type = 'triangle';
+  drone2.frequency.value = 82.5; // E2
+  droneGain2.gain.value = _bgmMuted ? 0 : 0.03;
+  drone2.connect(droneGain2);
+  droneGain2.connect(_ac.destination);
+  drone2.start();
+  _bgmNodes.push(drone2, droneGain2);
+  
+  // 느린 멜로디 패턴 (던전 탈출 분위기)
+  const pattern = [
+    [220, 0.5], [196, 0.25], [220, 0.25], [247, 0.5], [220, 0.5],
+    [196, 0.5], [165, 0.5], [196, 1.0],
+    [247, 0.5], [220, 0.25], [247, 0.25], [294, 0.5], [247, 0.5],
+    [220, 0.5], [196, 0.5], [220, 1.5],
+  ];
+  
+  function scheduleLoop() {
+    if (!_ac || _bgmNodes.length === 0) return;
+    let t = _ac.currentTime + 0.1;
+    pattern.forEach(([freq, dur]) => {
+      const o = _ac.createOscillator();
+      const g = _ac.createGain();
+      o.type = 'triangle';
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(_bgmMuted ? 0 : 0.08, t + 0.04);
+      g.gain.setValueAtTime(_bgmMuted ? 0 : 0.08, t + dur - 0.07);
+      g.gain.linearRampToValueAtTime(0, t + dur);
+      o.connect(g);
+      g.connect(_ac.destination);
+      o.start(t);
+      o.stop(t + dur + 0.02);
+      t += dur;
+    });
+    const totalDur = pattern.reduce((s, [,d]) => s + d, 0);
+    _bgmTid = setTimeout(scheduleLoop, (totalDur - 0.1) * 1000);
+  }
+  
+  scheduleLoop();
+}
+
+function stopBGM() {
+  clearTimeout(_bgmTid);
+  _bgmTid = null;
+  _bgmNodes.forEach(n => {
+    try { if (typeof n.stop === 'function') n.stop(); } catch(e) {}
+  });
+  _bgmNodes = [];
+}
+
+function toggleBGMMute() {
+  _bgmMuted = !_bgmMuted;
+  // 드론 노드 gain 조정
+  for (let i = 0; i < _bgmNodes.length; i++) {
+    const n = _bgmNodes[i];
+    if (n && n.gain && typeof n.gain.value !== 'undefined') {
+      if (!_bgmMuted && i === 1) n.gain.value = 0.05;
+      else if (!_bgmMuted && i === 3) n.gain.value = 0.03;
+      else if (_bgmMuted) n.gain.value = 0;
+    }
+  }
+  const btn = document.getElementById('bgm-mute-btn');
+  if (btn) btn.textContent = _bgmMuted ? '🔇' : '🔊';
 }
 
 function _note(freq, type, vol, t, dur) {
@@ -644,6 +735,7 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='Enter'||e.key===' '){
     if(gstate==='explanation') closeExplanation();
   }
+  else if(e.key==='m'||e.key==='M'){ toggleBGMMute(); }
 });
 
 // ── 플래시 ──
@@ -666,6 +758,7 @@ function restartGame() {
   finalClearTimer=0;
   _parts.length=0;
   buildStage(1, true);
+  startBGM();
   gstate='playing';
 }
 
