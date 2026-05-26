@@ -10,6 +10,45 @@ body { background:#000; display:flex; flex-direction:column; align-items:center;
 canvas { display:block; max-width:100%; max-height:100vh; }
 #ui { position:fixed; top:10px; left:50%; transform:translateX(-50%); color:#ffdd88; font-size:18px; text-align:center; text-shadow:0 0 10px #ff8800; pointer-events:none; white-space:nowrap; }
 #hint { position:fixed; bottom:10px; left:50%; transform:translateX(-50%); color:#666; font-size:13px; pointer-events:none; text-align:center; }
+
+/* 진행 바 */
+#progress-bar-wrap {
+  position:fixed; bottom:52px; left:50%; transform:translateX(-50%);
+  width:min(380px,88vw); height:12px;
+  background:rgba(255,255,255,0.08); border-radius:8px;
+  border:1px solid rgba(255,200,100,0.2); overflow:hidden;
+  pointer-events:none; z-index:50;
+}
+#progress-bar-fill {
+  height:100%; width:0%; border-radius:8px;
+  background:linear-gradient(90deg,#ff6600,#ffcc00,#00ffaa);
+  transition:width 0.4s ease;
+  box-shadow:0 0 10px #ffaa0088;
+}
+#progress-label {
+  position:fixed; bottom:66px; left:50%; transform:translateX(-50%);
+  color:#cc9944; font-size:11px; pointer-events:none; white-space:nowrap;
+}
+
+/* 모바일 터치 버튼 */
+#mobile-btns {
+  display:none;
+  position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
+  gap:24px; z-index:90;
+}
+#mob-true, #mob-false {
+  width:min(140px,38vw); height:64px;
+  font-size:clamp(18px,5vw,26px); font-weight:900;
+  border:none; border-radius:18px; cursor:pointer;
+  box-shadow:0 4px 24px #0009;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+#mob-true  { background:linear-gradient(135deg,#1a7a2a,#2ecc40); color:#fff; }
+#mob-false { background:linear-gradient(135deg,#8a1a1a,#e74c3c); color:#fff; }
+#mob-true:active  { transform:scale(0.91); }
+#mob-false:active { transform:scale(0.91); }
+
 #fracvis { margin:0 auto 14px; text-align:center; }
 #stage-intro {
   display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
@@ -19,6 +58,7 @@ canvas { display:block; max-width:100%; max-height:100vh; }
 }
 #stage-intro .si-gate { font-size:clamp(28px,5vw,48px); color:#ffcc66; font-weight:900; margin-bottom:6px; }
 #stage-intro .si-type { font-size:clamp(14px,2.5vw,20px); color:#cc9944; }
+#stage-intro .si-theme { font-size:clamp(11px,2vw,16px); color:#8877cc; margin-top:8px; }
 #hiscore-badge { position:fixed; top:10px; right:14px; color:#aaa; font-size:13px; pointer-events:none; text-shadow:none; }
 #qbox {
   display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
@@ -39,6 +79,8 @@ canvas { display:block; max-width:100%; max-height:100vh; }
   font-weight:900; letter-spacing:1px;
   transition:transform .1s, box-shadow .1s;
   box-shadow:0 4px 18px #0008;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
 }
 .answer-btns button:active { transform:scale(0.94); }
 #btn-true  { background:linear-gradient(135deg,#1a7a2a,#2ecc40); color:#fff; text-shadow:0 2px 6px #00000066; }
@@ -77,7 +119,8 @@ canvas { display:block; max-width:100%; max-height:100vh; }
 }
 #explanation h3 { color:#ff6666; font-size:22px; margin-bottom:12px; }
 #explanation .exp-q { color:#ccc; font-size:16px; margin-bottom:8px; line-height:1.5; }
-#explanation .exp-ans { color:#66ff88; font-size:20px; font-weight:bold; margin-bottom:16px; }
+#explanation .exp-ans { color:#66ff88; font-size:20px; font-weight:bold; margin-bottom:10px; }
+#explanation .exp-hint { color:#aaddff; font-size:14px; margin-bottom:16px; line-height:1.6; background:rgba(100,180,255,0.08); border-radius:8px; padding:8px 12px; }
 #explanation .exp-btn { font-size:17px; padding:10px 30px; background:#551111; border:2px solid #aa3333; border-radius:10px; color:#ff9999; cursor:pointer; font-weight:bold; transition:background .2s; }
 #explanation .exp-btn:hover { background:#771111; }
 #gameover {
@@ -98,28 +141,70 @@ canvas { display:block; max-width:100%; max-height:100vh; }
 #finalclear h1 { font-size:clamp(36px,7vw,64px); color:#FFD700; text-shadow:0 0 60px #FFD700,0 0 120px #ff8800; text-align:center; margin-bottom:12px; }
 #finalclear .fc-sub { font-size:clamp(16px,3vw,26px); color:#ffcc66; margin-bottom:10px; text-align:center; }
 #finalclear .fc-score { font-size:clamp(20px,4vw,34px); color:#00ffaa; font-weight:900; margin-bottom:28px; text-shadow:0 0 20px #00ffaa88; }
+#finalclear .fc-rank { font-size:clamp(14px,2.5vw,20px); color:#aaccff; margin-bottom:18px; }
 #finalclear button { font-size:22px; padding:14px 52px; background:linear-gradient(135deg,#cc6600,#ffaa00); border:none; border-radius:50px; color:#fff; font-weight:900; cursor:pointer; letter-spacing:2px; box-shadow:0 0 50px #ffaa0088; transition:transform .2s; }
 #finalclear button:hover { transform:scale(1.08); }
+/* 시작화면 별 트위클 */
+@keyframes twinkle { 0%,100%{opacity:0.3} 50%{opacity:1} }
+@keyframes floatUp { 0%{transform:translateY(0)} 50%{transform:translateY(-8px)} 100%{transform:translateY(0)} }
+@keyframes slideInDown { from{transform:translateY(-40px);opacity:0} to{transform:translateY(0);opacity:1} }
+.start-title { animation:floatUp 2.5s ease-in-out infinite; }
+.start-story { animation:slideInDown .6s ease-out both; }
+/* 테마 배지 */
+#theme-badge {
+  position:fixed; top:36px; left:14px; font-size:13px;
+  color:#9988cc; background:rgba(0,0,0,0.5);
+  padding:4px 10px; border-radius:8px; pointer-events:none; z-index:50;
+}
 </style>
 </head>
 <body>
-<div id="startscreen" style="position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 50% 50%,#0a0820 0%,#000 70%);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:200;padding:20px;">
-  <div style="font-size:clamp(30px,7vw,72px);font-weight:900;color:#ffdd88;text-shadow:0 0 40px #ff8800,0 0 80px #ff4400;text-align:center;margin-bottom:16px;">🏰 분수 계단 탈출 🏃</div>
-  <div style="font-size:clamp(13px,2.5vw,22px);color:#cc8844;text-align:center;margin-bottom:12px;line-height:1.8;">어두운 던전에 갇힌 용사를 구하라!<br>분수의 진실을 밝혀 계단을 올라가자</div>
-  <div style="font-size:clamp(11px,2vw,17px);color:#777;margin-bottom:32px;text-align:center;">⭕ 맞아요 (키 1 또는 버튼) &nbsp;|&nbsp; ❌ 틀려요 (키 2 또는 버튼)</div>
-  <button onclick="dismissStart()" style="font-size:clamp(18px,3vw,28px);padding:14px 52px;background:linear-gradient(135deg,#cc6600,#ff9900);border:none;border-radius:50px;color:#fff;font-weight:900;cursor:pointer;letter-spacing:2px;box-shadow:0 0 40px #ff880088;transition:transform .2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">▶ 던전 입장!</button>
+<!-- 시작 화면 -->
+<div id="startscreen" style="position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 50% 50%,#0a0820 0%,#000 70%);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:200;padding:20px;overflow:hidden;">
+  <!-- 배경 별들 -->
+  <canvas id="starcanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas>
+  <div class="start-title" style="font-size:clamp(30px,7vw,72px);font-weight:900;color:#ffdd88;text-shadow:0 0 40px #ff8800,0 0 80px #ff4400;text-align:center;margin-bottom:14px;position:relative;">🏰 분수 계단 탈출 🏃</div>
+  <div class="start-story" style="font-size:clamp(12px,2.2vw,19px);color:#bb7733;text-align:center;margin-bottom:10px;line-height:1.9;max-width:520px;background:rgba(0,0,0,0.4);padding:16px 24px;border-radius:14px;border:1px solid #553300;position:relative;">
+    📜 <strong style="color:#ffcc66">마법사 아리아</strong>가 어두운 분수 던전에 갇혔어요!<br>
+    분수의 비밀을 풀어 계단을 올라가야 탈출할 수 있어요.<br>
+    <span style="color:#aaccff;">각 관문마다 5개의 문제를 맞혀야 다음 단계로!</span><br>
+    <span style="font-size:0.88em;color:#666;">틀리면 하트가 줄어요. 하트 3개가 모두 없어지면 게임 오버!</span>
+  </div>
+  <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;justify-content:center;position:relative;">
+    <div style="font-size:clamp(11px,1.8vw,15px);color:#888;background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:10px;text-align:center;">🗺️ 1관문: 마법의 숲<br><span style="color:#666;font-size:0.85em;">분수의 기본</span></div>
+    <div style="font-size:clamp(11px,1.8vw,15px);color:#888;background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:10px;text-align:center;">🏰 2관문: 고대 성<br><span style="color:#666;font-size:0.85em;">크기 비교</span></div>
+    <div style="font-size:clamp(11px,1.8vw,15px);color:#888;background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:10px;text-align:center;">🌋 3관문: 화염 동굴<br><span style="color:#666;font-size:0.85em;">실생활 문제</span></div>
+    <div style="font-size:clamp(11px,1.8vw,15px);color:#888;background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:10px;text-align:center;">🌌 4관문: 우주 정거장<br><span style="color:#666;font-size:0.85em;">분수 계산</span></div>
+    <div style="font-size:clamp(11px,1.8vw,15px);color:#888;background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:10px;text-align:center;">👑 5관문: 왕의 탑<br><span style="color:#666;font-size:0.85em;">심화 통분</span></div>
+  </div>
+  <div style="font-size:clamp(11px,2vw,17px);color:#777;margin-bottom:28px;text-align:center;position:relative;">⭕ 맞아요 (키 1 또는 버튼) &nbsp;|&nbsp; ❌ 틀려요 (키 2 또는 버튼)</div>
+  <button onclick="dismissStart()" style="font-size:clamp(18px,3vw,28px);padding:14px 52px;background:linear-gradient(135deg,#cc6600,#ff9900);border:none;border-radius:50px;color:#fff;font-weight:900;cursor:pointer;letter-spacing:2px;box-shadow:0 0 40px #ff880088;transition:transform .2s;position:relative;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">▶ 던전 입장!</button>
 </div>
 
 <div id="ui">관문 <span id="snum">1</span>/5 &nbsp;|&nbsp; <span id="hearts">❤️❤️❤️</span> &nbsp;|&nbsp; 점수 <span id="scoreui">0</span></div>
 <div id="bgm-mute-btn" onclick="toggleBGMMute()" style="position:fixed;top:10px;right:14px;font-size:18px;cursor:pointer;color:#ffdd88;padding:4px 8px;background:rgba(0,0,0,0.5);border-radius:6px;z-index:400;">🔊</div>
 <div id="hiscore-badge" style="position:fixed;top:40px;right:14px;color:#aaa;font-size:13px;pointer-events:none;text-shadow:none;">최고: <span id="hiscore-val">0</span>점</div>
+<div id="theme-badge"></div>
+
+<!-- 진행 바 -->
+<div id="progress-label">문제 진행</div>
+<div id="progress-bar-wrap"><div id="progress-bar-fill"></div></div>
+
 <canvas id="c" width="800" height="500"></canvas>
+
 <div id="stage-intro">
   <div class="si-gate" id="si-gate-text"></div>
   <div class="si-type" id="si-type-text"></div>
+  <div class="si-theme" id="si-theme-text"></div>
 </div>
 <div id="hint">키보드 <strong style="color:#ffdd88">1</strong> = ⭕ 맞아요 &nbsp;|&nbsp; <strong style="color:#ffdd88">2</strong> = ❌ 틀려요 &nbsp;|&nbsp; 또는 버튼 클릭</div>
 <div id="combo-display"></div>
+
+<!-- 모바일 터치 버튼 -->
+<div id="mobile-btns">
+  <button id="mob-true"  onclick="answer(true)">⭕ 맞아요</button>
+  <button id="mob-false" onclick="answer(false)">❌ 틀려요</button>
+</div>
 
 <div id="qbox">
   <h2 id="qtitle">🔥 분수 문제 🔥</h2>
@@ -139,6 +224,7 @@ canvas { display:block; max-width:100%; max-height:100vh; }
   <h3>❌ 틀렸어요!</h3>
   <div class="exp-q" id="exp-question"></div>
   <div class="exp-ans" id="exp-answer"></div>
+  <div class="exp-hint" id="exp-hint"></div>
   <button class="exp-btn" onclick="closeExplanation()">알겠어요! 계속 →</button>
 </div>
 
@@ -153,7 +239,7 @@ canvas { display:block; max-width:100%; max-height:100vh; }
 <div id="gameover">
   <h2>💀 게임 오버 💀</h2>
   <div class="go-score" id="go-score"></div>
-  <p>용사가 던전에서 쓰러졌습니다...</p>
+  <p>마법사가 던전에서 쓰러졌습니다...</p>
   <button onclick="restartGame()">🔄 다시 도전!</button>
 </div>
 
@@ -161,10 +247,34 @@ canvas { display:block; max-width:100%; max-height:100vh; }
   <h1>🏆 모든 관문 클리어! 🏆</h1>
   <div class="fc-sub">분수의 던전을 완전히 정복했습니다!</div>
   <div class="fc-score" id="fc-score"></div>
+  <div class="fc-rank" id="fc-rank"></div>
   <button onclick="restartGame()">🔄 처음부터 다시!</button>
 </div>
 
 <script>
+// ── 시작화면 별 배경 ──
+(function initStarBg() {
+  const sc = document.getElementById('starcanvas');
+  if (!sc) return;
+  const sctx = sc.getContext('2d');
+  sc.width = window.innerWidth; sc.height = window.innerHeight;
+  const stars = Array.from({length:120}, () => ({
+    x: Math.random()*sc.width, y: Math.random()*sc.height,
+    r: Math.random()*1.8+0.3, phase: Math.random()*Math.PI*2, speed: 0.02+Math.random()*0.04
+  }));
+  function drawStars(t) {
+    if (!document.getElementById('startscreen') || document.getElementById('startscreen').style.display === 'none') return;
+    sctx.clearRect(0,0,sc.width,sc.height);
+    stars.forEach(s => {
+      const alpha = 0.3 + 0.7*Math.abs(Math.sin(s.phase + t*s.speed));
+      sctx.beginPath(); sctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      sctx.fillStyle = `rgba(255,240,180,${alpha})`; sctx.fill();
+    });
+    requestAnimationFrame(drawStars);
+  }
+  requestAnimationFrame(drawStars);
+})();
+
 function dismissStart() {
   document.getElementById('startscreen').style.display = 'none';
   initAudio();
@@ -178,46 +288,75 @@ function initAudio() {
   try { _ac = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
 }
 
-
 // ── BGM ──
 let _bgmNodes = [];
 let _bgmTid = null;
 let _bgmMuted = false;
 
+// 관문별 BGM 주파수 기반 (스케일/패턴 변경)
+const stageBGMConfigs = [
+  // 관문 1 — 마법의 숲: 밝고 경쾌
+  { drone:[55,82.5], pattern:[
+    [329,0.4],[392,0.25],[329,0.25],[294,0.4],[329,0.4],
+    [392,0.5],[440,0.5],[392,1.0],
+    [494,0.4],[440,0.25],[494,0.25],[523,0.4],[494,0.4],
+    [440,0.5],[392,0.5],[440,1.5],
+  ]},
+  // 관문 2 — 고대 성: 장엄하고 묵직
+  { drone:[41,61.7], pattern:[
+    [220,0.5],[196,0.25],[220,0.25],[247,0.5],[220,0.5],
+    [196,0.5],[175,0.5],[196,1.0],
+    [247,0.5],[220,0.25],[247,0.25],[294,0.5],[247,0.5],
+    [220,0.5],[196,0.5],[220,1.5],
+  ]},
+  // 관문 3 — 화염 동굴: 빠르고 긴장감
+  { drone:[55,73.4], pattern:[
+    [261,0.25],[294,0.25],[330,0.25],[261,0.25],[294,0.5],[330,0.5],
+    [349,0.25],[330,0.25],[294,0.25],[261,0.25],[294,0.5],[261,0.5],
+    [330,0.25],[294,0.25],[261,0.25],[246,0.25],[261,0.5],[294,1.0],
+  ]},
+  // 관문 4 — 우주 정거장: 신비롭고 느린
+  { drone:[36.7,55], pattern:[
+    [220,0.75],[277,0.5],[220,0.25],[196,0.75],[220,0.75],
+    [247,0.75],[220,0.5],[196,0.25],[175,0.75],[196,1.0],
+    [220,0.5],[277,0.5],[330,0.75],[277,0.5],[220,1.0],
+  ]},
+  // 관문 5 — 왕의 탑: 웅장하고 화려
+  { drone:[55,82.5], pattern:[
+    [330,0.3],[392,0.3],[494,0.3],[523,0.5],[494,0.3],[440,0.3],
+    [392,0.5],[440,0.5],[392,1.0],
+    [523,0.3],[587,0.3],[659,0.3],[698,0.5],[659,0.3],[587,0.3],
+    [523,0.5],[587,0.5],[523,1.5],
+  ]},
+];
+
 function startBGM() {
   stopBGM();
   if (!_ac) return;
-  
-  // 저음 드론 (던전 분위기)
+  const cfg = stageBGMConfigs[Math.min(stage-1, stageBGMConfigs.length-1)];
+
   const drone = _ac.createOscillator();
   const droneGain = _ac.createGain();
   drone.type = 'sine';
-  drone.frequency.value = 55;
+  drone.frequency.value = cfg.drone[0];
   droneGain.gain.value = _bgmMuted ? 0 : 0.05;
   drone.connect(droneGain);
   droneGain.connect(_ac.destination);
   drone.start();
   _bgmNodes.push(drone, droneGain);
-  
-  // 두 번째 드론 (5도 위)
+
   const drone2 = _ac.createOscillator();
   const droneGain2 = _ac.createGain();
   drone2.type = 'triangle';
-  drone2.frequency.value = 82.5; // E2
+  drone2.frequency.value = cfg.drone[1];
   droneGain2.gain.value = _bgmMuted ? 0 : 0.03;
   drone2.connect(droneGain2);
   droneGain2.connect(_ac.destination);
   drone2.start();
   _bgmNodes.push(drone2, droneGain2);
-  
-  // 느린 멜로디 패턴 (던전 탈출 분위기)
-  const pattern = [
-    [220, 0.5], [196, 0.25], [220, 0.25], [247, 0.5], [220, 0.5],
-    [196, 0.5], [165, 0.5], [196, 1.0],
-    [247, 0.5], [220, 0.25], [247, 0.25], [294, 0.5], [247, 0.5],
-    [220, 0.5], [196, 0.5], [220, 1.5],
-  ];
-  
+
+  const pattern = cfg.pattern;
+
   function scheduleLoop() {
     if (!_ac || _bgmNodes.length === 0) return;
     let t = _ac.currentTime + 0.1;
@@ -239,7 +378,7 @@ function startBGM() {
     const totalDur = pattern.reduce((s, [,d]) => s + d, 0);
     _bgmTid = setTimeout(scheduleLoop, (totalDur - 0.1) * 1000);
   }
-  
+
   scheduleLoop();
 }
 
@@ -254,7 +393,6 @@ function stopBGM() {
 
 function toggleBGMMute() {
   _bgmMuted = !_bgmMuted;
-  // 드론 노드 gain 조정
   for (let i = 0; i < _bgmNodes.length; i++) {
     const n = _bgmNodes[i];
     if (n && n.gain && typeof n.gain.value !== 'undefined') {
@@ -338,6 +476,18 @@ function playFinalClear() {
   });
 }
 
+// 착지 먼지 소리
+function playLand() {
+  if (!_ac) return;
+  const t = _ac.currentTime;
+  const o = _ac.createOscillator(), g = _ac.createGain();
+  o.type = 'sine'; o.frequency.value = 120;
+  o.connect(g); g.connect(_ac.destination);
+  g.gain.setValueAtTime(0.15, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+  o.start(t); o.stop(t + 0.13);
+}
+
 // ── 최고 점수 ──
 function getHighScore() { try { return parseInt(localStorage.getItem('fracStairs_hi')||'0'); } catch(e) { return 0; } }
 function saveHighScore(s) { try { if(s>getHighScore()) localStorage.setItem('fracStairs_hi',s); } catch(e){} }
@@ -375,29 +525,77 @@ function getStars(wrongs) {
   return '⭐';
 }
 
-// ── 관문 소개 ──
-const stageTypeDesc = [
-  '분수의 기본 의미를 확인해요',
-  '분수의 크기를 비교해요',
-  '실생활 속 분수 이야기',
-  '분수 덧셈·뺄셈·약분',
-  '심화: 다른 분모 통분',
+// ── 관문 테마 설정 ──
+const stageThemes = [
+  { name:'🌲 마법의 숲', type:'분수의 기본 의미를 확인해요', bg:['#030a04','#0a1a08'], star:'#88ff88', accent:'#44cc44', stairColor:'#2a5c14', stairGlow:'#44cc44', floor:'#0a1a04', desc:'초록빛 마법의 숲에서 분수를 탐험해요!' },
+  { name:'🏰 고대 성',   type:'분수의 크기를 비교해요',     bg:['#04030f','#0d0a1a'], star:'#aaaaff', accent:'#6666cc', stairColor:'#2a2050', stairGlow:'#8866ff', floor:'#080616', desc:'웅장한 고대 성에서 분수의 크기를 겨뤄요!' },
+  { name:'🌋 화염 동굴', type:'실생활 속 분수 이야기',       bg:['#0f0302','#1a0804'], star:'#ffaa44', accent:'#ff6600', stairColor:'#5c2a00', stairGlow:'#ff6600', floor:'#1a0400', desc:'뜨거운 화염 동굴에서 분수 퀴즈를 풀어요!' },
+  { name:'🌌 우주 정거장', type:'분수 덧셈·뺄셈·약분',       bg:['#010108','#04040f'], star:'#44aaff', accent:'#0088ff', stairColor:'#002050', stairGlow:'#0088ff', floor:'#010110', desc:'광활한 우주에서 분수 계산에 도전해요!' },
+  { name:'👑 왕의 탑',   type:'심화: 다른 분모 통분',       bg:['#0a0802','#1a1404'], star:'#ffd700', accent:'#ffaa00', stairColor:'#503a00', stairGlow:'#ffcc00', floor:'#0f0a00', desc:'왕의 탑 최후의 관문! 통분을 마스터해요!' },
 ];
+
+function getTheme() { return stageThemes[Math.min(stage-1, stageThemes.length-1)]; }
+
 function showStageIntro(s, callback) {
+  const theme = stageThemes[s-1];
   const el = document.getElementById('stage-intro');
-  document.getElementById('si-gate-text').textContent = `🏰 ${s}관문 입장!`;
-  document.getElementById('si-type-text').textContent = stageTypeDesc[s-1];
+  // 관문 소개 색상을 테마에 맞게 변경
+  el.style.borderColor = theme.accent;
+  el.style.boxShadow = `0 0 80px ${theme.accent}66`;
+  document.getElementById('si-gate-text').textContent = `${theme.name} 입장!`;
+  document.getElementById('si-type-text').textContent = theme.type;
+  document.getElementById('si-theme-text').textContent = theme.desc;
   el.style.display = 'block';
   el.style.opacity = '1';
+  // 테마 배지 업데이트
+  document.getElementById('theme-badge').textContent = theme.name;
   setTimeout(() => {
     el.style.transition = 'opacity 0.5s';
     el.style.opacity = '0';
     setTimeout(() => { el.style.display='none'; el.style.opacity='1'; el.style.transition=''; callback(); }, 500);
-  }, 1200);
+  }, 1400);
 }
 
 // ── 파티클 시스템 ──
 const _parts = [];
+
+// 점프 트레일
+function spawnTrail(x, y, color) {
+  for (let i = 0; i < 4; i++) {
+    _parts.push({
+      x: x + (Math.random()-0.5)*8,
+      y: y + (Math.random()-0.5)*8,
+      vx: (Math.random()-0.5)*1.5,
+      vy: (Math.random()-0.5)*1.5 + 0.5,
+      r: 2 + Math.random()*2,
+      color: color,
+      life: 0.7 + Math.random()*0.3,
+      decay: 0.06 + Math.random()*0.04,
+      isStar: false,
+      isTrail: true,
+    });
+  }
+}
+
+// 착지 먼지
+function spawnDust(x, y, themeAccent) {
+  for (let i = 0; i < 10; i++) {
+    const ang = Math.PI + (Math.random()-0.5)*1.2;
+    const spd = 1.5 + Math.random()*3;
+    _parts.push({
+      x, y,
+      vx: Math.cos(ang)*spd,
+      vy: Math.sin(ang)*spd - 1,
+      r: 2 + Math.random()*3,
+      color: themeAccent,
+      life: 0.8,
+      decay: 0.05 + Math.random()*0.03,
+      isStar: false,
+      isDust: true,
+    });
+  }
+}
+
 function spawnConfetti(x, y, count, colors) {
   for (let i = 0; i < count; i++) {
     const ang = Math.random() * Math.PI * 2;
@@ -436,13 +634,20 @@ function updateParticles() {
   for (let i = _parts.length - 1; i >= 0; i--) {
     const p = _parts[i];
     p.x += p.vx; p.y += p.vy;
-    p.vy += 0.14; p.vx *= 0.97;
+    if (p.isDust) { p.vy += 0.08; p.vx *= 0.90; }
+    else if (p.isTrail) { p.vy += 0.05; p.vx *= 0.95; }
+    else { p.vy += 0.14; p.vx *= 0.97; }
     p.life -= p.decay;
     if (p.life <= 0) { _parts.splice(i, 1); continue; }
     ctx.save();
     ctx.globalAlpha = p.life;
     ctx.fillStyle = p.color;
-    if (p.isStar) {
+    if (p.isTrail) {
+      ctx.shadowBlur = 6; ctx.shadowColor = p.color;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI*2); ctx.fill();
+    } else if (p.isDust) {
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI*2); ctx.fill();
+    } else if (p.isStar) {
       ctx.shadowBlur = 12; ctx.shadowColor = p.color;
       ctx.beginPath();
       for (let k = 0; k < 10; k++) {
@@ -479,78 +684,78 @@ let bats = [], snakes = [];
 let torchFlicker = 0;
 let finalClearTimer = 0;
 
-// ── 관문별 문제 풀 ──
+// ── 관문별 문제 풀 (정답 힌트 포함) ──
 const gatePools = [
   // 관문 1 — 분수의 기본 의미
   [
-    {q:'1/2 은 전체를 똑같이 2로 나눈 것 중 1개이다', a:true},
-    {q:'1/4 은 전체를 4로 나눈 것 중 1개이다', a:true},
-    {q:'3/5 은 전체를 5로 나눈 것 중 3개이다', a:true},
-    {q:'2/2 는 전체(1)와 같다', a:true},
-    {q:'0/3 은 아무것도 없다는 뜻이다', a:true},
-    {q:'4/4 는 1보다 크다', a:false},
-    {q:'분모는 전체를 몇 조각으로 나눴는지 나타낸다', a:true},
-    {q:'분자는 전체 조각 수를 나타낸다', a:false},
-    {q:'1/3 은 1/2 보다 크다', a:false},
-    {q:'5/5 = 1', a:true},
+    {q:'1/2 은 전체를 똑같이 2로 나눈 것 중 1개이다', a:true,  hint:'분수는 전체를 같은 크기로 나눈 것이에요. 1/2은 2조각 중 1조각!'},
+    {q:'1/4 은 전체를 4로 나눈 것 중 1개이다', a:true,  hint:'분모(4)는 전체를 몇 조각으로 나눴는지, 분자(1)는 그 중 몇 개인지 알려줘요.'},
+    {q:'3/5 은 전체를 5로 나눈 것 중 3개이다', a:true,  hint:'3/5 = 5조각 중 3조각. 분자가 3, 분모가 5랍니다.'},
+    {q:'2/2 는 전체(1)와 같다', a:true,  hint:'2조각으로 나눈 것 중 2조각 = 전체! 그래서 2/2 = 1이에요.'},
+    {q:'0/3 은 아무것도 없다는 뜻이다', a:true,  hint:'분자가 0이면 아무 조각도 없는 거예요. 0/3 = 0이랍니다.'},
+    {q:'4/4 는 1보다 크다', a:false, hint:'4조각으로 나눈 것 중 4조각 = 전체 = 1이에요. 1보다 크지 않아요.'},
+    {q:'분모는 전체를 몇 조각으로 나눴는지 나타낸다', a:true,  hint:'분수 a/b에서 b(아래)가 분모, a(위)가 분자예요. 분모 = 전체 나눈 수!'},
+    {q:'분자는 전체 조각 수를 나타낸다', a:false, hint:'분자는 내가 가진 조각 수예요. 전체 조각 수는 분모가 나타내요!'},
+    {q:'1/3 은 1/2 보다 크다', a:false, hint:'1/3은 전체를 3등분한 1조각, 1/2은 2등분한 1조각. 조각이 클수록 더 커요!'},
+    {q:'5/5 = 1', a:true,  hint:'5조각으로 나눈 것 중 5조각 = 전부 = 1이에요. 분자=분모이면 항상 1!'},
   ],
   // 관문 2 — 분수 크기 비교
   [
-    {q:'분모가 같을 때, 분자가 클수록 분수가 크다', a:true},
-    {q:'분모가 클수록 한 조각의 크기가 작아진다', a:true},
-    {q:'1/2 > 1/3', a:true},
-    {q:'1/4 > 1/3', a:false},
-    {q:'2/5 > 1/5', a:true},
-    {q:'3/8 < 5/8', a:true},
-    {q:'2/6 = 1/3', a:true},
-    {q:'1/2 = 2/4', a:true},
-    {q:'3/4 > 3/5', a:true},
-    {q:'4/8 과 1/2 의 크기는 같다', a:true},
+    {q:'분모가 같을 때, 분자가 클수록 분수가 크다', a:true,  hint:'1/5, 2/5, 3/5... 분모가 같으면 분자가 클수록 더 많은 조각이니까 커요!'},
+    {q:'분모가 클수록 한 조각의 크기가 작아진다', a:true,  hint:'피자를 8조각 자르면 4조각보다 더 작아지지요? 분모가 크면 조각이 작아요.'},
+    {q:'1/2 > 1/3', a:true,  hint:'1/2은 절반, 1/3은 세 번째 하나. 절반이 더 크죠!'},
+    {q:'1/4 > 1/3', a:false, hint:'1/4은 4등분 중 1개, 1/3은 3등분 중 1개. 3등분이 더 크니까 1/3이 더 커요.'},
+    {q:'2/5 > 1/5', a:true,  hint:'분모가 같으면 분자만 비교! 2 > 1이니까 2/5 > 1/5.'},
+    {q:'3/8 < 5/8', a:true,  hint:'분모가 8로 같으니 분자 비교: 3 < 5, 그러므로 3/8 < 5/8. 맞아요!'},
+    {q:'2/6 = 1/3', a:true,  hint:'2/6에서 위아래를 2로 나누면 1/3. 같은 크기의 분수랍니다!'},
+    {q:'1/2 = 2/4', a:true,  hint:'2/4에서 위아래를 2로 나누면 1/2. 모양은 달라도 크기는 같아요!'},
+    {q:'3/4 > 3/5', a:true,  hint:'분자가 3으로 같을 때: 분모가 작을수록 한 조각이 커요. 4 < 5이므로 3/4 > 3/5!'},
+    {q:'4/8 과 1/2 의 크기는 같다', a:true,  hint:'4/8 ÷ 4 = 1/2. 위아래를 같은 수로 나눠도 크기는 변하지 않아요!'},
   ],
   // 관문 3 — 실생활 문장제 + 기초 덧셈·뺄셈
   [
-    {q:'사과 8개 중 2개를 먹었다면, 먹은 양은 2/8이다', a:true},
-    {q:'12칸짜리 초콜릿에서 4칸 먹으면, 먹은 양은 1/3이다', a:true},
-    {q:'피자를 6조각으로 잘랐다. 3조각 먹으면 피자의 1/2을 먹은 것이다', a:true},
-    {q:'물 한 병의 3/5을 마셨다. 남은 양은 2/5이다', a:true},
-    {q:'하루(24시간) 중 6시간은 하루의 1/4이다', a:true},
-    {q:'리본 1m를 4등분하면 한 조각은 1/4 m이다', a:true},
-    {q:'반 학생 30명 중 10명이 안경을 쓴다. 안경 쓴 학생은 전체의 1/3이다', a:true},
-    {q:'색종이를 8등분하여 3장을 사용했다. 사용한 양은 3/8이다', a:true},
-    {q:'주스 1/4 컵을 마시고 또 1/4 컵을 마셨다. 합쳐서 1/2 컵을 마셨다', a:true},
-    {q:'케이크의 3/5 를 먹었다면 남은 양은 1/5 이다', a:false},
-    {q:'색칠한 부분이 5칸 중 2칸이면 2/5이다', a:true},
-    {q:'1/3 + 1/3 = 2/6 이다', a:false},
+    {q:'사과 8개 중 2개를 먹었다면, 먹은 양은 2/8이다', a:true,  hint:'먹은 것(2) ÷ 전체(8) = 2/8. 실생활에서도 이렇게 분수를 써요!'},
+    {q:'12칸짜리 초콜릿에서 4칸 먹으면, 먹은 양은 1/3이다', a:true,  hint:'4/12를 약분하면 1/3! 4÷4=1, 12÷4=3이에요.'},
+    {q:'피자를 6조각으로 잘랐다. 3조각 먹으면 피자의 1/2을 먹은 것이다', a:true,  hint:'3/6 = 1/2. 반을 먹은 거예요!'},
+    {q:'물 한 병의 3/5을 마셨다. 남은 양은 2/5이다', a:true,  hint:'전체(5/5) - 마신 것(3/5) = 남은 것(2/5). 맞아요!'},
+    {q:'하루(24시간) 중 6시간은 하루의 1/4이다', a:true,  hint:'6/24 = 1/4. 24÷6=4니까 6시간은 하루의 1/4이에요!'},
+    {q:'리본 1m를 4등분하면 한 조각은 1/4 m이다', a:true,  hint:'1 ÷ 4 = 1/4. 4등분하면 한 조각이 1/4이에요!'},
+    {q:'반 학생 30명 중 10명이 안경을 쓴다. 안경 쓴 학생은 전체의 1/3이다', a:true,  hint:'10/30 = 1/3. 위아래를 10으로 나누면 1/3이에요!'},
+    {q:'색종이를 8등분하여 3장을 사용했다. 사용한 양은 3/8이다', a:true,  hint:'사용한 것(3) ÷ 전체(8) = 3/8. 그대로 분수로 나타내면 돼요!'},
+    {q:'주스 1/4 컵을 마시고 또 1/4 컵을 마셨다. 합쳐서 1/2 컵을 마셨다', a:true,  hint:'1/4 + 1/4 = 2/4 = 1/2. 분모가 같으면 분자끼리 더해요!'},
+    {q:'케이크의 3/5 를 먹었다면 남은 양은 1/5 이다', a:false, hint:'5/5 - 3/5 = 2/5. 남은 양은 2/5예요! (1/5이 아니에요)'},
+    {q:'색칠한 부분이 5칸 중 2칸이면 2/5이다', a:true,  hint:'색칠한 것(2) ÷ 전체(5) = 2/5. 분수의 기본 뜻이에요!'},
+    {q:'1/3 + 1/3 = 2/6 이다', a:false, hint:'분모가 같으면 분자만 더해요! 1/3 + 1/3 = 2/3. (분모는 그대로!)'},
   ],
   // 관문 4 — 분수 계산 (같은 분모 덧셈·뺄셈·약분)
   [
-    {q:'1/5 + 3/5 = 4/5', a:true},
-    {q:'4/7 - 2/7 = 2/7', a:true},
-    {q:'2/6 을 약분하면 1/3이다', a:true},
-    {q:'4/8 을 약분하면 1/4이다', a:false},
-    {q:'3/4 - 1/4 = 2/4 이고, 약분하면 1/2이다', a:true},
-    {q:'6/9 를 약분하면 2/3이다', a:true},
-    {q:'1/3 + 1/3 + 1/3 = 1', a:true},
-    {q:'5/6 - 1/6 = 4/6 이고, 약분하면 2/3이다', a:true},
-    {q:'분모가 같은 분수는 분자끼리 더하거나 뺄 수 있다', a:true},
-    {q:'1/4 + 2/4 = 3/8 이다', a:false},
-    {q:'7/8 - 3/8 = 4/8 = 1/2', a:true},
-    {q:'2/3 + 2/3 = 4/3 이므로 1보다 크다', a:true},
+    {q:'1/5 + 3/5 = 4/5', a:true,  hint:'분모가 5로 같으므로 분자끼리 더해요: 1+3=4, 그러므로 4/5!'},
+    {q:'4/7 - 2/7 = 2/7', a:true,  hint:'분모가 7로 같으므로 분자끼리 빼요: 4-2=2, 그러므로 2/7!'},
+    {q:'2/6 을 약분하면 1/3이다', a:true,  hint:'2/6에서 위아래를 최대공약수(2)로 나눠요: 2÷2=1, 6÷2=3 → 1/3!'},
+    {q:'4/8 을 약분하면 1/4이다', a:false, hint:'4/8에서 위아래를 4로 나눠요: 4÷4=1, 8÷4=2 → 1/2이에요!'},
+    {q:'3/4 - 1/4 = 2/4 이고, 약분하면 1/2이다', a:true,  hint:'3/4-1/4=2/4, 그리고 2/4=1/2(위아래를 2로 나눠요). 맞아요!'},
+    {q:'6/9 를 약분하면 2/3이다', a:true,  hint:'6/9에서 위아래를 3으로 나눠요: 6÷3=2, 9÷3=3 → 2/3!'},
+    {q:'1/3 + 1/3 + 1/3 = 1', a:true,  hint:'1+1+1=3, 분모는 3 → 3/3 = 1. 세 번 더하면 전체가 돼요!'},
+    {q:'5/6 - 1/6 = 4/6 이고, 약분하면 2/3이다', a:true,  hint:'5-1=4 → 4/6, 그리고 4÷2=2, 6÷2=3 → 2/3. 완벽해요!'},
+    {q:'분모가 같은 분수는 분자끼리 더하거나 뺄 수 있다', a:true,  hint:'분모가 같으면 조각 크기가 같아요. 그러니 개수(분자)만 계산하면 돼요!'},
+    {q:'1/4 + 2/4 = 3/8 이다', a:false, hint:'분모가 같을 때는 분모는 그대로! 1/4+2/4=3/4예요. 분모를 더하지 않아요!'},
+    {q:'7/8 - 3/8 = 4/8 = 1/2', a:true,  hint:'7-3=4 → 4/8, 그리고 4÷4=1, 8÷4=2 → 1/2. 맞아요!'},
+    {q:'2/3 + 2/3 = 4/3 이므로 1보다 크다', a:true,  hint:'2+2=4 → 4/3. 분자(4)가 분모(3)보다 크니까 1보다 크죠!'},
   ],
   // 관문 5 — 심화 (다른 분모 덧셈·뺄셈·통분)
   [
-    {q:'1/2 + 1/4 = 3/4', a:true},
-    {q:'2/3 + 1/6 = 5/6', a:true},
-    {q:'3/4 - 1/2 = 1/4', a:true},
-    {q:'1/2 과 1/3 중 더 큰 것은 1/3이다', a:false},
-    {q:'분모가 다른 분수를 더하려면 통분(분모를 같게)이 필요하다', a:true},
-    {q:'1/2 + 1/3 = 2/5', a:false},
-    {q:'3/4 는 3/8 의 두 배이다', a:true},
-    {q:'1 - 2/5 = 3/5', a:true},
-    {q:'2/3 > 3/4', a:false},
-    {q:'1/4 + 1/2 = 3/4 이다', a:true},
-    {q:'5/6 - 1/3 = 1/2 이다', a:true},
-    {q:'2/5 + 1/10 = 1/2 이다', a:true},
+    {q:'1/2 + 1/4 = 3/4', a:true,  hint:'통분: 1/2 = 2/4. 그러면 2/4+1/4=3/4. 분모를 4로 맞춰요!'},
+    {q:'2/3 + 1/6 = 5/6', a:true,  hint:'통분: 2/3 = 4/6. 그러면 4/6+1/6=5/6. 분모를 6으로 맞춰요!'},
+    {q:'3/4 - 1/2 = 1/4', a:true,  hint:'통분: 1/2 = 2/4. 그러면 3/4-2/4=1/4. 맞아요!'},
+    {q:'1/2 과 1/3 중 더 큰 것은 1/3이다', a:false, hint:'통분: 1/2=3/6, 1/3=2/6. 3/6 > 2/6이므로 1/2이 더 커요!'},
+    {q:'분모가 다른 분수를 더하려면 통분(분모를 같게)이 필요하다', a:true,  hint:'조각 크기가 다르면 바로 더할 수 없어요. 분모를 같게 만들고 더해야 해요!'},
+    {q:'1/2 + 1/3 = 2/5', a:false, hint:'분모가 다를 때 분모를 더하면 안 돼요! 통분하면: 3/6+2/6=5/6이에요.'},
+    {q:'3/4 는 3/8 의 두 배이다', a:true,  hint:'3/4 = 6/8. 6/8은 3/8의 두 배죠! 통분해서 비교해요.'},
+    {q:'1 - 2/5 = 3/5', a:true,  hint:'1 = 5/5. 그러면 5/5 - 2/5 = 3/5. 맞아요!'},
+    {q:'2/3 > 3/4', a:false, hint:'통분: 2/3=8/12, 3/4=9/12. 8/12 < 9/12이므로 2/3이 작아요!'},
+    {q:'1/4 + 1/2 = 3/4 이다', a:true,  hint:'통분: 1/2=2/4. 그러면 1/4+2/4=3/4. 맞아요!'},
+    {q:'5/6 - 1/3 = 1/2 이다', a:true,  hint:'통분: 1/3=2/6. 그러면 5/6-2/6=3/6=1/2. 맞아요!'},
+    {q:'2/5 + 1/10 = 1/2 이다', a:true,  hint:'통분: 2/5=4/10. 그러면 4/10+1/10=5/10=1/2. 맞아요!'},
   ],
 ];
 
@@ -607,6 +812,19 @@ function showCombo(n) {
   el._t = setTimeout(() => el.style.display = 'none', 1400);
 }
 
+function updateProgressBar() {
+  const total = 5; // 관문당 문제 수
+  const done = playerPos;
+  const pct = (done / total) * 100;
+  document.getElementById('progress-bar-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = `진행: ${done}/${total} 문제`;
+}
+
+// ── 모바일 감지 ──
+function isMobile() {
+  return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+}
+
 // ── 스테이지 생성 ──
 function buildStage(s, skipIntro) {
   stairs=[];
@@ -621,6 +839,14 @@ function buildStage(s, skipIntro) {
   snakes=[];
   if(s>=3) snakes.push({visible:false,timer:80+Math.random()*120});
   stageQs = shuffle(gatePools[s-1]).slice(0,5);
+  updateProgressBar();
+
+  // 관문별 BGM 전환
+  if (_ac) { stopBGM(); setTimeout(() => startBGM(), 200); }
+
+  // 테마 배지 갱신
+  document.getElementById('theme-badge').textContent = stageThemes[s-1].name;
+
   if (skipIntro) { scheduleQ(); }
   else { showStageIntro(s, ()=>scheduleQ()); }
 }
@@ -641,11 +867,16 @@ function showNextQ() {
   }).join(' ');
   document.getElementById('qdots').style.display='block';
 
-  const labels = ['🔥 분수 문제','🔥 분수 문제','🌟 문장 문제','🔢 계산 문제','⚔️ 심화 문제'];
+  const labels = ['🌲 분수 문제','🏰 비교 문제','🌋 생활 문제','🌌 계산 문제','👑 심화 문제'];
   document.getElementById('qtitle').textContent = labels[stage-1];
   document.getElementById('qtext').textContent = currentQ.q;
   renderFractionVisual(currentQ.q);
   document.getElementById('qbox').style.display='block';
+
+  // 모바일에서 qbox 표시 시 mobile-btns 숨김
+  if (isMobile()) {
+    document.getElementById('mobile-btns').style.display='none';
+  }
 }
 
 // ── 답변 ──
@@ -689,8 +920,12 @@ function doJump(correct) {
       jumpAnim=null;
       if(correct){
         to.revealed=true;
+        const theme = getTheme();
         spawnConfetti(to.x, to.y - 10, 28, ['#FFD700','#FF8800','#FFFFFF','#00FF88','#FF4444']);
+        spawnDust(to.x, to.y + 10, theme.accent);
+        playLand();
         playerPos++;
+        updateProgressBar();
         gstate='playing';
         scheduleQ();
       } else {
@@ -708,13 +943,13 @@ function showExplanation() {
   const ans = currentQ.a ? '⭕ 맞아요!' : '❌ 틀려요!';
   document.getElementById('exp-question').textContent = `"${currentQ.q}"`;
   document.getElementById('exp-answer').textContent = `정답: ${ans}`;
+  document.getElementById('exp-hint').textContent = currentQ.hint || '다시 한번 생각해 보세요!';
   document.getElementById('explanation').style.display = 'block';
   gstate = 'explanation';
 }
 
 function closeExplanation() {
   document.getElementById('explanation').style.display = 'none';
-  // fallAnim이 끝난 경우 respawn 처리 (impact가 끝날 때까지 기다림)
   if (gstate === 'explanation') {
     gstate = 'falling';
   }
@@ -775,15 +1010,25 @@ function showClear(){
     updateHighScoreUI();
     playFinalClear();
     finalClearTimer = 0;
+    spawnBigConfetti();
     document.getElementById('fc-score').textContent = `총 점수: ${score}점 · 정답: ${totalCorrect}/25`;
+    // 등급 산정
+    let rank = '';
+    if (score >= 2800) rank = '🏆 전설의 분수 마스터!';
+    else if (score >= 2400) rank = '🥇 분수 왕';
+    else if (score >= 2000) rank = '🥈 분수 기사';
+    else if (score >= 1500) rank = '🥉 분수 수련생';
+    else rank = '📚 분수 탐험가';
+    document.getElementById('fc-rank').textContent = rank;
     document.getElementById('finalclear').style.display = 'flex';
     return;
   }
 
-  document.getElementById('sc-title').textContent=`🎉 ${stage}관문 통과!`;
+  const theme = stageThemes[stage-1];
+  document.getElementById('sc-title').textContent=`🎉 ${theme.name} 통과!`;
   document.getElementById('sc-stars').textContent=stars;
   document.getElementById('sc-score').textContent=`점수: ${score}점`;
-  document.getElementById('sc-msg').textContent=`다음은 ${stage+1}관문!`;
+  document.getElementById('sc-msg').textContent=`다음은 ${stageThemes[stage].name}!`;
   const btn=document.getElementById('sc-btn');
   btn.textContent='다음 관문 →';
   btn.onclick=nextStage;
@@ -827,6 +1072,15 @@ function update(){
 
   if(jumpAnim){
     jumpAnim.t++;
+    // 점프 중 트레일 파티클
+    if (jumpAnim.t % 3 === 0) {
+      const t = jumpAnim.t/jumpAnim.dur;
+      const ease = t<0.5?2*t*t:-1+(4-2*t)*t;
+      const px = jumpAnim.fromX+(jumpAnim.toX-jumpAnim.fromX)*ease;
+      const py = jumpAnim.fromY+(jumpAnim.toY-jumpAnim.fromY)*ease - Math.sin(t*Math.PI)*80;
+      const theme = getTheme();
+      spawnTrail(px, py + 16, theme.accent);
+    }
     if(jumpAnim.t>=jumpAnim.dur){ jumpAnim.onDone(); }
   }
 
@@ -859,19 +1113,104 @@ function update(){
     shakeAnim.t++;
     if(shakeAnim.t>=shakeAnim.maxT) shakeAnim=null;
   }
+
+  // 모바일 버튼 표시 여부
+  const mb = document.getElementById('mobile-btns');
+  if (isMobile()) {
+    mb.style.display = (gstate === 'question') ? 'flex' : 'none';
+  }
 }
 
 // ── 렌더링 ──
 function drawBg(){
+  const theme = getTheme();
   const g=ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,'#030307'); g.addColorStop(1,'#09091a');
+  g.addColorStop(0, theme.bg[0]);
+  g.addColorStop(1, theme.bg[1]);
   ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
 
-  ctx.fillStyle='#0c0c1c';
-  for(let i=0;i<12;i++){
-    const bx=30+i*67, bh=24+Math.sin(i*2.1+0.5)*20;
-    ctx.beginPath(); ctx.moveTo(bx-12,0); ctx.lineTo(bx+12,0); ctx.lineTo(bx,bh); ctx.closePath(); ctx.fill();
+  // 관문별 배경 장식
+  if (stage === 1) {
+    // 마법의 숲: 나무 실루엣
+    ctx.fillStyle='#0c1a0a';
+    for(let i=0;i<10;i++){
+      const bx=20+i*82, bh=50+Math.sin(i*1.7+0.5)*30;
+      ctx.beginPath();
+      ctx.moveTo(bx-14,0); ctx.lineTo(bx+14,0);
+      ctx.lineTo(bx+6,bh*0.5); ctx.lineTo(bx+18,bh*0.5);
+      ctx.lineTo(bx,bh); ctx.lineTo(bx-18,bh*0.5);
+      ctx.lineTo(bx-6,bh*0.5); ctx.closePath(); ctx.fill();
+    }
+    // 반딧불이
+    for(let i=0;i<8;i++){
+      const fx=(i*137+torchFlicker*0.3)%W;
+      const fy=50+Math.sin(i+torchFlicker*0.04)*80;
+      const alpha=0.4+0.6*Math.abs(Math.sin(torchFlicker*0.05+i));
+      ctx.beginPath(); ctx.arc(fx,fy,2,0,Math.PI*2);
+      ctx.fillStyle=`rgba(180,255,100,${alpha})`; ctx.fill();
+    }
+  } else if (stage === 2) {
+    // 고대 성: 성벽 흉벽
+    ctx.fillStyle='#1a1630';
+    ctx.fillRect(0, 0, W, 40);
+    for(let i=0;i<16;i++){
+      const bx=i*54;
+      ctx.fillStyle='#0d0c22';
+      ctx.fillRect(bx, 0, 28, 30);
+    }
+    // 별
+    for(let i=0;i<20;i++){
+      const sx=(i*173)%W, sy=(i*97)%120;
+      const alpha=0.4+0.6*Math.abs(Math.sin(torchFlicker*0.02+i));
+      ctx.beginPath(); ctx.arc(sx,sy,1.2,0,Math.PI*2);
+      ctx.fillStyle=`rgba(180,180,255,${alpha})`; ctx.fill();
+    }
+  } else if (stage === 3) {
+    // 화염 동굴: 용암 바닥 + 불꽃
+    ctx.fillStyle='#2a0800';
+    ctx.fillRect(0, H-30, W, 30);
+    for(let i=0;i<14;i++){
+      const lx=i*60, lh=8+Math.sin(i+torchFlicker*0.1)*6;
+      ctx.fillStyle=`rgba(255,${60+Math.abs(Math.sin(torchFlicker*0.08+i))*80},0,0.6)`;
+      ctx.beginPath(); ctx.ellipse(lx+30,H-30,16,lh,0,0,Math.PI*2); ctx.fill();
+    }
+    // 동굴 종유석
+    ctx.fillStyle='#1a0600';
+    for(let i=0;i<12;i++){
+      const cx=30+i*66, ch=30+Math.sin(i*2)*20;
+      ctx.beginPath(); ctx.moveTo(cx-10,0); ctx.lineTo(cx+10,0); ctx.lineTo(cx,ch); ctx.closePath(); ctx.fill();
+    }
+  } else if (stage === 4) {
+    // 우주: 별 + 행성
+    for(let i=0;i<40;i++){
+      const sx=(i*137+11)%W, sy=(i*97+7)%H;
+      const alpha=0.2+0.8*Math.abs(Math.sin(torchFlicker*0.015+i*0.7));
+      ctx.beginPath(); ctx.arc(sx,sy,0.8+Math.random()*0.6,0,Math.PI*2);
+      ctx.fillStyle=`rgba(180,210,255,${alpha})`; ctx.fill();
+    }
+    // 행성
+    const pg=ctx.createRadialGradient(650,80,5,650,80,50);
+    pg.addColorStop(0,'#2244aa'); pg.addColorStop(1,'#001133');
+    ctx.fillStyle=pg; ctx.beginPath(); ctx.arc(650,80,50,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(100,160,255,0.2)';
+    ctx.beginPath(); ctx.ellipse(650,80,80,14,0.3,0,Math.PI*2); ctx.fill();
+  } else if (stage === 5) {
+    // 왕의 탑: 황금 장식
+    ctx.fillStyle='#1a1200';
+    for(let i=0;i<12;i++){
+      const bx=30+i*67, bh=20+Math.sin(i*2.1+0.5)*16;
+      ctx.beginPath(); ctx.moveTo(bx-12,0); ctx.lineTo(bx+12,0); ctx.lineTo(bx,bh); ctx.closePath(); ctx.fill();
+    }
+    // 황금 기둥
+    for(let i=0;i<5;i++){
+      const pilX=100+i*150;
+      const gp=ctx.createLinearGradient(pilX-6,0,pilX+6,0);
+      gp.addColorStop(0,'rgba(80,60,0,0.5)'); gp.addColorStop(0.5,'rgba(200,160,0,0.3)'); gp.addColorStop(1,'rgba(80,60,0,0.5)');
+      ctx.fillStyle=gp;
+      ctx.fillRect(pilX-6,0,12,H);
+    }
   }
+
   const gFloor=ctx.createLinearGradient(0,H-60,0,H);
   gFloor.addColorStop(0,'rgba(0,0,0,0)'); gFloor.addColorStop(1,'rgba(0,0,0,1)');
   ctx.fillStyle=gFloor; ctx.fillRect(0,H-60,W,60);
@@ -879,21 +1218,43 @@ function drawBg(){
 
 function drawStair(st, idx){
   if(!st.revealed) return;
+  const theme = getTheme();
   const glow = idx===playerPos;
   const flicker=Math.sin(torchFlicker*0.08+idx)*1.5;
 
-  ctx.shadowColor='#ff8800'; ctx.shadowBlur=glow?20:8;
-  ctx.fillStyle=glow?'#6b4018':'#3c2610';
+  ctx.shadowColor=theme.stairGlow; ctx.shadowBlur=glow?24:10;
+  ctx.fillStyle=glow?theme.stairColor:'#2a1c0a';
+  // 계단 본체 (테마 색상 적용)
+  if (glow) {
+    const sg = ctx.createLinearGradient(st.x-44,st.y,st.x+44,st.y+18);
+    sg.addColorStop(0, theme.stairColor);
+    sg.addColorStop(1, '#1a1000');
+    ctx.fillStyle = sg;
+  }
   ctx.fillRect(st.x-44,st.y,88,18);
   ctx.shadowBlur=0;
-  ctx.fillStyle='#261608';
+  ctx.fillStyle='#181006';
   ctx.fillRect(st.x-44,st.y+18,88,8);
 
-  ctx.font='18px serif';
-  ctx.fillText('🔥',st.x-9+flicker,st.y-5);
+  // 계단 테두리 (테마 색상)
+  ctx.strokeStyle = glow ? theme.accent : 'rgba(255,150,50,0.3)';
+  ctx.lineWidth = glow ? 1.5 : 0.5;
+  ctx.strokeRect(st.x-44,st.y,88,18);
+  ctx.lineWidth = 1;
+
+  // 횃불 (첫 계단만)
+  if (idx === playerPos) {
+    ctx.font='18px serif';
+    ctx.fillText('🔥',st.x-9+flicker,st.y-5);
+  } else {
+    ctx.font='14px serif';
+    ctx.globalAlpha = 0.6;
+    ctx.fillText('🕯️',st.x-7+flicker,st.y-3);
+    ctx.globalAlpha = 1;
+  }
 
   // 계단 번호
-  ctx.fillStyle='rgba(255,200,100,0.5)';
+  ctx.fillStyle=`rgba(255,200,100,0.6)`;
   ctx.font='11px sans-serif';
   ctx.textAlign='center';
   ctx.fillText(idx===0?'시작':`${idx}번`, st.x, st.y+14);
@@ -901,13 +1262,20 @@ function drawStair(st, idx){
 }
 
 function drawFog(){
+  const theme = getTheme();
   for(let i=playerPos+1;i<stairs.length;i++){
     const st=stairs[i];
-    const gr=ctx.createRadialGradient(st.x,st.y+10,0,st.x,st.y+10,80);
-    gr.addColorStop(0,'rgba(15,10,40,0.94)');
-    gr.addColorStop(1,'rgba(15,10,40,0)');
+    const gr=ctx.createRadialGradient(st.x,st.y+10,0,st.x,st.y+10,85);
+    gr.addColorStop(0,'rgba(10,8,30,0.95)');
+    gr.addColorStop(1,'rgba(10,8,30,0)');
     ctx.fillStyle=gr;
-    ctx.fillRect(st.x-85,st.y-80,170,160);
+    ctx.fillRect(st.x-90,st.y-85,180,170);
+    // 테마에 따른 안개 색
+    const fogGr=ctx.createRadialGradient(st.x,st.y+10,0,st.x,st.y+10,60);
+    fogGr.addColorStop(0,`rgba(5,5,20,0.4)`);
+    fogGr.addColorStop(1,'rgba(5,5,20,0)');
+    ctx.fillStyle=fogGr;
+    ctx.fillRect(st.x-65,st.y-65,130,130);
   }
 }
 
@@ -929,14 +1297,24 @@ function drawPlayer(){
   ctx.save();
   ctx.translate(p.x, p.y);
   if(p.rot) ctx.rotate(p.rot);
+  // 플레이어 그림자
+  ctx.globalAlpha=0.3;
+  ctx.fillStyle='#000';
+  ctx.beginPath(); ctx.ellipse(0,4,14,5,0,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=1;
   ctx.font='32px serif';
-  ctx.fillText('🧒',-16, 0);
+  ctx.fillText('🧙',-16, 0); // 마법사로 변경
   ctx.restore();
 }
 
 function drawBats(){
   ctx.font='20px serif';
-  for(const b of bats) ctx.fillText('🦇',b.x,b.y);
+  for(const b of bats) {
+    ctx.save();
+    ctx.globalAlpha=0.7;
+    ctx.fillText('🦇',b.x,b.y);
+    ctx.restore();
+  }
 }
 
 function drawSnakes(){
@@ -944,7 +1322,6 @@ function drawSnakes(){
     const target=stairs[Math.min(playerPos+1,stairs.length-1)];
     ctx.font='24px serif';
     ctx.fillText('🐍',target.x-12,target.y-34);
-    // 경고 텍스트
     ctx.save();
     ctx.fillStyle=`rgba(255,80,80,${0.5+0.5*Math.sin(torchFlicker*0.15)})`;
     ctx.font='bold 13px sans-serif';
@@ -993,6 +1370,11 @@ function drawImpact(){
   }
 }
 
+// 우주 배경 별 (stage 4)
+function drawSpaceStars(){
+  // 이미 drawBg에서 처리됨
+}
+
 function render(){
   let sx=0,sy=0;
   if(shakeAnim){
@@ -1018,6 +1400,11 @@ function render(){
 // ── 메인 루프 ──
 updateHeartsUI();
 updateHighScoreUI();
+updateProgressBar();
+// 모바일 버튼 초기 설정
+if (isMobile()) {
+  document.getElementById('hint').style.display = 'none';
+}
 buildStage(1, true);
 (function loop(){
   update();
