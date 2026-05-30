@@ -150,6 +150,20 @@ canvas { display:block; max-width:100%; max-height:100vh; }
 @keyframes slideInDown { from{transform:translateY(-40px);opacity:0} to{transform:translateY(0);opacity:1} }
 .start-title { animation:floatUp 2.5s ease-in-out infinite; }
 .start-story { animation:slideInDown .6s ease-out both; }
+/* 문제 박스 슬라이드인 */
+@keyframes qboxSlideIn { from{transform:translate(-50%,-62%);opacity:0} to{transform:translate(-50%,-50%);opacity:1} }
+.qbox-enter { animation:qboxSlideIn 0.28s cubic-bezier(0.22,1,0.36,1) both; }
+/* 문제 타이머 바 */
+#q-timer-bar-wrap {
+  width:100%; height:7px; background:rgba(255,255,255,0.1);
+  border-radius:4px; margin-bottom:14px; overflow:hidden;
+}
+#q-timer-bar {
+  height:100%; width:100%; border-radius:4px;
+  transition:width 0.1s linear, background 0.4s;
+}
+/* 최종 클리어 별점 */
+#finalclear .fc-stars { font-size:clamp(22px,4vw,38px); margin-bottom:10px; text-align:center; letter-spacing:2px; }
 /* 테마 배지 */
 #theme-badge {
   position:fixed; top:36px; left:14px; font-size:13px;
@@ -208,6 +222,7 @@ canvas { display:block; max-width:100%; max-height:100vh; }
 
 <div id="qbox">
   <h2 id="qtitle">🔥 분수 문제 🔥</h2>
+  <div id="q-timer-bar-wrap"><div id="q-timer-bar"></div></div>
   <div id="qdots" style="display:none; font-size:22px; letter-spacing:8px; margin-bottom:10px;"></div>
   <div id="qtext"></div>
   <div id="fracvis"></div>
@@ -246,6 +261,7 @@ canvas { display:block; max-width:100%; max-height:100vh; }
 <div id="finalclear">
   <h1>🏆 모든 관문 클리어! 🏆</h1>
   <div class="fc-sub">분수의 던전을 완전히 정복했습니다!</div>
+  <div class="fc-stars" id="fc-stars"></div>
   <div class="fc-score" id="fc-score"></div>
   <div class="fc-rank" id="fc-rank"></div>
   <button onclick="restartGame()">🔄 처음부터 다시!</button>
@@ -670,9 +686,46 @@ const W = 800, H = 500;
 
 // ── 상태 ──
 let stage = 1, lives = 3;
-let score = 0, combo = 0, totalCorrect = 0, stageWrongs = 0;
+let score = 0, combo = 0, totalCorrect = 0, stageWrongs = 0, totalStars = 0;
 // playing | question | jumping | falling | impact | dead | clear | gameover | explanation
 let gstate = 'playing';
+
+// ── 문제 타이머 (관문별 제한 시간) ──
+const STAGE_TIMERS = [15, 13, 11, 10, 9];
+let _qTimerRafId = null;
+let _qTimerStartTime = 0;
+let _qTimerMax = 15;
+
+function startQTimer() {
+  clearQTimer();
+  _qTimerMax = STAGE_TIMERS[Math.min(stage - 1, STAGE_TIMERS.length - 1)];
+  _qTimerStartTime = performance.now();
+  const bar = document.getElementById('q-timer-bar');
+  if (bar) { bar.style.width = '100%'; bar.style.background = '#00cc66'; }
+
+  function tick(now) {
+    if (gstate !== 'question') return;
+    const elapsed = (now - _qTimerStartTime) / 1000;
+    const remaining = Math.max(0, _qTimerMax - elapsed);
+    const pct = remaining / _qTimerMax * 100;
+    const bar = document.getElementById('q-timer-bar');
+    if (bar) {
+      bar.style.width = pct + '%';
+      if (pct > 50) bar.style.background = '#00cc66';
+      else if (pct > 25) bar.style.background = '#ffaa00';
+      else bar.style.background = '#ff4444';
+    }
+    if (remaining <= 0) { answer(null); return; }
+    _qTimerRafId = requestAnimationFrame(tick);
+  }
+  _qTimerRafId = requestAnimationFrame(tick);
+}
+
+function clearQTimer() {
+  if (_qTimerRafId) { cancelAnimationFrame(_qTimerRafId); _qTimerRafId = null; }
+  const bar = document.getElementById('q-timer-bar');
+  if (bar) { bar.style.width = '100%'; bar.style.background = '#00cc66'; }
+}
 let playerPos = 0;
 let stairs = [];
 let currentQ = null;
@@ -871,7 +924,14 @@ function showNextQ() {
   document.getElementById('qtitle').textContent = labels[stage-1];
   document.getElementById('qtext').textContent = currentQ.q;
   renderFractionVisual(currentQ.q);
-  document.getElementById('qbox').style.display='block';
+
+  const qbox = document.getElementById('qbox');
+  qbox.classList.remove('qbox-enter');
+  void qbox.offsetWidth;
+  qbox.style.display = 'block';
+  qbox.classList.add('qbox-enter');
+
+  startQTimer();
 
   // 모바일에서 qbox 표시 시 mobile-btns 숨김
   if (isMobile()) {
@@ -882,6 +942,7 @@ function showNextQ() {
 // ── 답변 ──
 function answer(userTrue) {
   if (gstate !== 'question') return;
+  clearQTimer();
   document.getElementById('qbox').style.display='none';
   const correct = userTrue===currentQ.a;
   showFlash(correct ? '⭕' : '❌');
@@ -983,7 +1044,7 @@ function showFlash(txt){
 
 // ── 재시작 ──
 function restartGame() {
-  stage=1; lives=3; score=0; combo=0; totalCorrect=0; stageWrongs=0;
+  stage=1; lives=3; score=0; combo=0; totalCorrect=0; stageWrongs=0; totalStars=0;
   document.getElementById('snum').textContent=1;
   updateHeartsUI();
   updateScoreUI();
@@ -1004,6 +1065,8 @@ function showClear(){
   gstate='clear';
 
   const stars = getStars(stageWrongs);
+  const starCount = stageWrongs === 0 ? 3 : (stageWrongs === 1 ? 2 : 1);
+  totalStars += starCount;
 
   if (stage >= 5) {
     saveHighScore(score);
@@ -1011,6 +1074,7 @@ function showClear(){
     playFinalClear();
     finalClearTimer = 0;
     spawnBigConfetti();
+    document.getElementById('fc-stars').textContent = `⭐ ${totalStars} / 15 별`;
     document.getElementById('fc-score').textContent = `총 점수: ${score}점 · 정답: ${totalCorrect}/25`;
     // 등급 산정
     let rank = '';
