@@ -170,6 +170,18 @@ canvas { display:block; max-width:100%; max-height:100vh; }
   color:#9988cc; background:rgba(0,0,0,0.5);
   padding:4px 10px; border-radius:8px; pointer-events:none; z-index:50;
 }
+/* 난이도 선택 버튼 */
+.diff-btn-frac {
+  padding:8px 18px; border:2px solid #553300; border-radius:20px;
+  background:rgba(30,15,5,0.75); color:#cc9944; font-size:13px;
+  cursor:pointer; transition:all .18s; font-family:'맑은 고딕',sans-serif;
+  line-height:1.4; text-align:center;
+}
+.diff-btn-frac:hover { border-color:#ff8800; color:#ffcc66; background:rgba(60,30,5,0.9); }
+.diff-btn-frac.active { border-color:#ff8800; background:rgba(80,38,0,0.95); color:#ffcc44; box-shadow:0 0 14px #ff880055; font-weight:bold; }
+/* 하트 소실 흔들림 */
+@keyframes heartShake { 0%,100%{transform:scale(1)} 20%{transform:scale(1.5) rotate(-8deg)} 45%{transform:scale(0.75) rotate(8deg)} 65%{transform:scale(1.2) rotate(-4deg)} }
+#hearts.heart-lost { animation:heartShake 0.5s ease-out; display:inline-block; }
 </style>
 </head>
 <body>
@@ -191,7 +203,12 @@ canvas { display:block; max-width:100%; max-height:100vh; }
     <div style="font-size:clamp(11px,1.8vw,15px);color:#888;background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:10px;text-align:center;">🌌 4관문: 우주 정거장<br><span style="color:#666;font-size:0.85em;">분수 계산</span></div>
     <div style="font-size:clamp(11px,1.8vw,15px);color:#888;background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:10px;text-align:center;">👑 5관문: 왕의 탑<br><span style="color:#666;font-size:0.85em;">심화 통분</span></div>
   </div>
-  <div style="font-size:clamp(11px,2vw,17px);color:#777;margin-bottom:28px;text-align:center;position:relative;">⭕ 맞아요 (키 1 또는 버튼) &nbsp;|&nbsp; ❌ 틀려요 (키 2 또는 버튼)</div>
+  <div style="font-size:clamp(11px,2vw,17px);color:#777;margin-bottom:16px;text-align:center;position:relative;">⭕ 맞아요 (키 1 또는 버튼) &nbsp;|&nbsp; ❌ 틀려요 (키 2 또는 버튼)</div>
+  <div style="display:flex;gap:10px;margin-bottom:22px;flex-wrap:wrap;justify-content:center;position:relative;">
+    <button class="diff-btn-frac" data-diff="easy" onclick="setFracDiff(event,'easy')">🌱 쉬움<br><small style="opacity:.8">여유로운 타이머</small></button>
+    <button class="diff-btn-frac active" data-diff="normal" onclick="setFracDiff(event,'normal')">⚔️ 보통<br><small style="opacity:.8">기본 타이머</small></button>
+    <button class="diff-btn-frac" data-diff="hard" onclick="setFracDiff(event,'hard')">🔥 어려움<br><small style="opacity:.8">빠른 타이머</small></button>
+  </div>
   <button onclick="dismissStart()" style="font-size:clamp(18px,3vw,28px);padding:14px 52px;background:linear-gradient(135deg,#cc6600,#ff9900);border:none;border-radius:50px;color:#fff;font-weight:900;cursor:pointer;letter-spacing:2px;box-shadow:0 0 40px #ff880088;transition:transform .2s;position:relative;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">▶ 던전 입장!</button>
 </div>
 
@@ -290,6 +307,14 @@ canvas { display:block; max-width:100%; max-height:100vh; }
   }
   requestAnimationFrame(drawStars);
 })();
+
+let diffMult = 1.0;
+function setFracDiff(e, d) {
+  const mults = { easy: 1.6, normal: 1.0, hard: 0.65 };
+  diffMult = mults[d] || 1.0;
+  document.querySelectorAll('.diff-btn-frac').forEach(b => b.classList.remove('active'));
+  e.currentTarget.classList.add('active');
+}
 
 function dismissStart() {
   document.getElementById('startscreen').style.display = 'none';
@@ -555,7 +580,6 @@ function getTheme() { return stageThemes[Math.min(stage-1, stageThemes.length-1)
 function showStageIntro(s, callback) {
   const theme = stageThemes[s-1];
   const el = document.getElementById('stage-intro');
-  // 관문 소개 색상을 테마에 맞게 변경
   el.style.borderColor = theme.accent;
   el.style.boxShadow = `0 0 80px ${theme.accent}66`;
   document.getElementById('si-gate-text').textContent = `${theme.name} 입장!`;
@@ -563,7 +587,6 @@ function showStageIntro(s, callback) {
   document.getElementById('si-theme-text').textContent = theme.desc;
   el.style.display = 'block';
   el.style.opacity = '1';
-  // 테마 배지 업데이트
   document.getElementById('theme-badge').textContent = theme.name;
   setTimeout(() => {
     el.style.transition = 'opacity 0.5s';
@@ -575,7 +598,6 @@ function showStageIntro(s, callback) {
 // ── 파티클 시스템 ──
 const _parts = [];
 
-// 점프 트레일
 function spawnTrail(x, y, color) {
   for (let i = 0; i < 4; i++) {
     _parts.push({
@@ -593,7 +615,6 @@ function spawnTrail(x, y, color) {
   }
 }
 
-// 착지 먼지
 function spawnDust(x, y, themeAccent) {
   for (let i = 0; i < 10; i++) {
     const ang = Math.PI + (Math.random()-0.5)*1.2;
@@ -698,7 +719,7 @@ let _qTimerMax = 15;
 
 function startQTimer() {
   clearQTimer();
-  _qTimerMax = STAGE_TIMERS[Math.min(stage - 1, STAGE_TIMERS.length - 1)];
+  _qTimerMax = STAGE_TIMERS[Math.min(stage - 1, STAGE_TIMERS.length - 1)] * diffMult;
   _qTimerStartTime = performance.now();
   const bar = document.getElementById('q-timer-bar');
   if (bar) { bar.style.width = '100%'; bar.style.background = '#00cc66'; }
@@ -843,10 +864,17 @@ function playBoom() {
 }
 
 // ── UI 업데이트 ──
-function updateHeartsUI() {
+function updateHeartsUI(lost) {
   const full = '❤️'.repeat(lives);
   const empty = '🖤'.repeat(Math.max(0, 3 - lives));
-  document.getElementById('hearts').textContent = full + empty;
+  const el = document.getElementById('hearts');
+  el.textContent = full + empty;
+  if (lost) {
+    el.classList.remove('heart-lost');
+    void el.offsetWidth;
+    el.classList.add('heart-lost');
+    setTimeout(() => el.classList.remove('heart-lost'), 520);
+  }
 }
 
 function updateScoreUI() {
@@ -866,7 +894,7 @@ function showCombo(n) {
 }
 
 function updateProgressBar() {
-  const total = 5; // 관문당 문제 수
+  const total = 5;
   const done = playerPos;
   const pct = (done / total) * 100;
   document.getElementById('progress-bar-fill').style.width = pct + '%';
@@ -894,10 +922,7 @@ function buildStage(s, skipIntro) {
   stageQs = shuffle(gatePools[s-1]).slice(0,5);
   updateProgressBar();
 
-  // 관문별 BGM 전환
   if (_ac) { stopBGM(); setTimeout(() => startBGM(), 200); }
-
-  // 테마 배지 갱신
   document.getElementById('theme-badge').textContent = stageThemes[s-1].name;
 
   if (skipIntro) { scheduleQ(); }
@@ -933,7 +958,6 @@ function showNextQ() {
 
   startQTimer();
 
-  // 모바일에서 qbox 표시 시 mobile-btns 숨김
   if (isMobile()) {
     document.getElementById('mobile-btns').style.display='none';
   }
@@ -994,7 +1018,7 @@ function doJump(correct) {
         gstate='falling';
         fallAnim={x:to.x, y:to.y-34, vy:-1, vx:(Math.random()-0.5)*3, rot:0, rotV:(Math.random()>0.5?1:-1)*0.18};
         lives--;
-        updateHeartsUI();
+        updateHeartsUI(true);
       }
     }
   };
@@ -1076,7 +1100,6 @@ function showClear(){
     spawnBigConfetti();
     document.getElementById('fc-stars').textContent = `⭐ ${totalStars} / 15 별`;
     document.getElementById('fc-score').textContent = `총 점수: ${score}점 · 정답: ${totalCorrect}/25`;
-    // 등급 산정
     let rank = '';
     if (score >= 2800) rank = '🏆 전설의 분수 마스터!';
     else if (score >= 2400) rank = '🥇 분수 왕';
@@ -1136,7 +1159,6 @@ function update(){
 
   if(jumpAnim){
     jumpAnim.t++;
-    // 점프 중 트레일 파티클
     if (jumpAnim.t % 3 === 0) {
       const t = jumpAnim.t/jumpAnim.dur;
       const ease = t<0.5?2*t*t:-1+(4-2*t)*t;
@@ -1178,7 +1200,6 @@ function update(){
     if(shakeAnim.t>=shakeAnim.maxT) shakeAnim=null;
   }
 
-  // 모바일 버튼 표시 여부
   const mb = document.getElementById('mobile-btns');
   if (isMobile()) {
     mb.style.display = (gstate === 'question') ? 'flex' : 'none';
@@ -1193,9 +1214,7 @@ function drawBg(){
   g.addColorStop(1, theme.bg[1]);
   ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
 
-  // 관문별 배경 장식
   if (stage === 1) {
-    // 마법의 숲: 나무 실루엣
     ctx.fillStyle='#0c1a0a';
     for(let i=0;i<10;i++){
       const bx=20+i*82, bh=50+Math.sin(i*1.7+0.5)*30;
@@ -1205,7 +1224,6 @@ function drawBg(){
       ctx.lineTo(bx,bh); ctx.lineTo(bx-18,bh*0.5);
       ctx.lineTo(bx-6,bh*0.5); ctx.closePath(); ctx.fill();
     }
-    // 반딧불이
     for(let i=0;i<8;i++){
       const fx=(i*137+torchFlicker*0.3)%W;
       const fy=50+Math.sin(i+torchFlicker*0.04)*80;
@@ -1214,7 +1232,6 @@ function drawBg(){
       ctx.fillStyle=`rgba(180,255,100,${alpha})`; ctx.fill();
     }
   } else if (stage === 2) {
-    // 고대 성: 성벽 흉벽
     ctx.fillStyle='#1a1630';
     ctx.fillRect(0, 0, W, 40);
     for(let i=0;i<16;i++){
@@ -1222,7 +1239,6 @@ function drawBg(){
       ctx.fillStyle='#0d0c22';
       ctx.fillRect(bx, 0, 28, 30);
     }
-    // 별
     for(let i=0;i<20;i++){
       const sx=(i*173)%W, sy=(i*97)%120;
       const alpha=0.4+0.6*Math.abs(Math.sin(torchFlicker*0.02+i));
@@ -1230,7 +1246,6 @@ function drawBg(){
       ctx.fillStyle=`rgba(180,180,255,${alpha})`; ctx.fill();
     }
   } else if (stage === 3) {
-    // 화염 동굴: 용암 바닥 + 불꽃
     ctx.fillStyle='#2a0800';
     ctx.fillRect(0, H-30, W, 30);
     for(let i=0;i<14;i++){
@@ -1238,34 +1253,29 @@ function drawBg(){
       ctx.fillStyle=`rgba(255,${60+Math.abs(Math.sin(torchFlicker*0.08+i))*80},0,0.6)`;
       ctx.beginPath(); ctx.ellipse(lx+30,H-30,16,lh,0,0,Math.PI*2); ctx.fill();
     }
-    // 동굴 종유석
     ctx.fillStyle='#1a0600';
     for(let i=0;i<12;i++){
       const cx=30+i*66, ch=30+Math.sin(i*2)*20;
       ctx.beginPath(); ctx.moveTo(cx-10,0); ctx.lineTo(cx+10,0); ctx.lineTo(cx,ch); ctx.closePath(); ctx.fill();
     }
   } else if (stage === 4) {
-    // 우주: 별 + 행성
     for(let i=0;i<40;i++){
       const sx=(i*137+11)%W, sy=(i*97+7)%H;
       const alpha=0.2+0.8*Math.abs(Math.sin(torchFlicker*0.015+i*0.7));
       ctx.beginPath(); ctx.arc(sx,sy,0.8+Math.random()*0.6,0,Math.PI*2);
       ctx.fillStyle=`rgba(180,210,255,${alpha})`; ctx.fill();
     }
-    // 행성
     const pg=ctx.createRadialGradient(650,80,5,650,80,50);
     pg.addColorStop(0,'#2244aa'); pg.addColorStop(1,'#001133');
     ctx.fillStyle=pg; ctx.beginPath(); ctx.arc(650,80,50,0,Math.PI*2); ctx.fill();
     ctx.fillStyle='rgba(100,160,255,0.2)';
     ctx.beginPath(); ctx.ellipse(650,80,80,14,0.3,0,Math.PI*2); ctx.fill();
   } else if (stage === 5) {
-    // 왕의 탑: 황금 장식
     ctx.fillStyle='#1a1200';
     for(let i=0;i<12;i++){
       const bx=30+i*67, bh=20+Math.sin(i*2.1+0.5)*16;
       ctx.beginPath(); ctx.moveTo(bx-12,0); ctx.lineTo(bx+12,0); ctx.lineTo(bx,bh); ctx.closePath(); ctx.fill();
     }
-    // 황금 기둥
     for(let i=0;i<5;i++){
       const pilX=100+i*150;
       const gp=ctx.createLinearGradient(pilX-6,0,pilX+6,0);
@@ -1288,7 +1298,6 @@ function drawStair(st, idx){
 
   ctx.shadowColor=theme.stairGlow; ctx.shadowBlur=glow?24:10;
   ctx.fillStyle=glow?theme.stairColor:'#2a1c0a';
-  // 계단 본체 (테마 색상 적용)
   if (glow) {
     const sg = ctx.createLinearGradient(st.x-44,st.y,st.x+44,st.y+18);
     sg.addColorStop(0, theme.stairColor);
@@ -1300,13 +1309,11 @@ function drawStair(st, idx){
   ctx.fillStyle='#181006';
   ctx.fillRect(st.x-44,st.y+18,88,8);
 
-  // 계단 테두리 (테마 색상)
   ctx.strokeStyle = glow ? theme.accent : 'rgba(255,150,50,0.3)';
   ctx.lineWidth = glow ? 1.5 : 0.5;
   ctx.strokeRect(st.x-44,st.y,88,18);
   ctx.lineWidth = 1;
 
-  // 횃불 (첫 계단만)
   if (idx === playerPos) {
     ctx.font='18px serif';
     ctx.fillText('🔥',st.x-9+flicker,st.y-5);
@@ -1317,7 +1324,6 @@ function drawStair(st, idx){
     ctx.globalAlpha = 1;
   }
 
-  // 계단 번호
   ctx.fillStyle=`rgba(255,200,100,0.6)`;
   ctx.font='11px sans-serif';
   ctx.textAlign='center';
@@ -1326,7 +1332,6 @@ function drawStair(st, idx){
 }
 
 function drawFog(){
-  const theme = getTheme();
   for(let i=playerPos+1;i<stairs.length;i++){
     const st=stairs[i];
     const gr=ctx.createRadialGradient(st.x,st.y+10,0,st.x,st.y+10,85);
@@ -1334,7 +1339,6 @@ function drawFog(){
     gr.addColorStop(1,'rgba(10,8,30,0)');
     ctx.fillStyle=gr;
     ctx.fillRect(st.x-90,st.y-85,180,170);
-    // 테마에 따른 안개 색
     const fogGr=ctx.createRadialGradient(st.x,st.y+10,0,st.x,st.y+10,60);
     fogGr.addColorStop(0,`rgba(5,5,20,0.4)`);
     fogGr.addColorStop(1,'rgba(5,5,20,0)');
@@ -1361,13 +1365,12 @@ function drawPlayer(){
   ctx.save();
   ctx.translate(p.x, p.y);
   if(p.rot) ctx.rotate(p.rot);
-  // 플레이어 그림자
   ctx.globalAlpha=0.3;
   ctx.fillStyle='#000';
   ctx.beginPath(); ctx.ellipse(0,4,14,5,0,0,Math.PI*2); ctx.fill();
   ctx.globalAlpha=1;
   ctx.font='32px serif';
-  ctx.fillText('🧙',-16, 0); // 마법사로 변경
+  ctx.fillText('🧙',-16, 0);
   ctx.restore();
 }
 
@@ -1434,11 +1437,6 @@ function drawImpact(){
   }
 }
 
-// 우주 배경 별 (stage 4)
-function drawSpaceStars(){
-  // 이미 drawBg에서 처리됨
-}
-
 function render(){
   let sx=0,sy=0;
   if(shakeAnim){
@@ -1465,7 +1463,6 @@ function render(){
 updateHeartsUI();
 updateHighScoreUI();
 updateProgressBar();
-// 모바일 버튼 초기 설정
 if (isMobile()) {
   document.getElementById('hint').style.display = 'none';
 }
