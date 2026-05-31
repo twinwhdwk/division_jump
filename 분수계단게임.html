@@ -707,6 +707,7 @@ const W = 800, H = 500;
 
 // ── 상태 ──
 let stage = 1, lives = 3;
+let paused = false;
 let score = 0, combo = 0, totalCorrect = 0, stageWrongs = 0, totalStars = 0;
 // playing | question | jumping | falling | impact | dead | clear | gameover | explanation
 let gstate = 'playing';
@@ -973,7 +974,10 @@ function answer(userTrue) {
   if (correct) {
     combo++;
     totalCorrect++;
-    const points = 100 + (combo - 1) * 10;
+    const elapsed = (performance.now() - _qTimerStartTime) / 1000;
+    const remaining = Math.max(0, _qTimerMax - elapsed);
+    const speedBonus = Math.round((remaining / _qTimerMax) * 50);
+    const points = 100 + (combo - 1) * 10 + speedBonus;
     score += points;
     updateScoreUI();
     if (combo >= 2) {
@@ -981,6 +985,15 @@ function answer(userTrue) {
       playComboSound(combo);
     } else {
       playCorrectSound();
+    }
+    if(speedBonus>=20){
+      const el=document.getElementById('combo-display');
+      if(el&&combo<2){
+        el.textContent='⚡ 속도 보너스 +'+speedBonus;
+        el.style.display='block';
+        el.style.animation='none';void el.offsetWidth;el.style.animation='comboAnim .3s ease-out';
+        clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',1200);
+      }
     }
     doJump(true);
   } else {
@@ -1056,6 +1069,7 @@ document.addEventListener('keydown',e=>{
     if(gstate==='explanation') closeExplanation();
   }
   else if(e.key==='m'||e.key==='M'){ toggleBGMMute(); }
+  else if(e.key==='p'||e.key==='P'){ if(gstate==='playing'||gstate==='paused'){paused=!paused;gstate=paused?'paused':'playing';} }
 });
 
 // ── 플래시 ──
@@ -1086,6 +1100,10 @@ function restartGame() {
 function showClear(){
   playStageClear();
   spawnConfetti(W/2, H/2, 50, ['#FFD700','#FF8800','#FFFFFF','#00FF88','#FF4444']);
+  if(stageWrongs===0){
+    spawnConfetti(W/4,H/4,30,['#FFD700','#FFFFFF','#FFD700']);
+    spawnConfetti(W*3/4,H/4,30,['#FFD700','#FFFFFF','#FFD700']);
+  }
   gstate='clear';
 
   const stars = getStars(stageWrongs);
@@ -1112,9 +1130,10 @@ function showClear(){
   }
 
   const theme = stageThemes[stage-1];
-  document.getElementById('sc-title').textContent=`🎉 ${theme.name} 통과!`;
+  document.getElementById('sc-title').textContent=`🎉 ${theme.name} 통과!${stageWrongs===0?' 🌟 완벽!':''}`;
+  if(stageWrongs===0){score+=200;updateScoreUI();}
   document.getElementById('sc-stars').textContent=stars;
-  document.getElementById('sc-score').textContent=`점수: ${score}점`;
+  document.getElementById('sc-score').textContent=`점수: ${score}점${stageWrongs===0?' (+200 퍼펙트 보너스!)':''}`;
   document.getElementById('sc-msg').textContent=`다음은 ${stageThemes[stage].name}!`;
   const btn=document.getElementById('sc-btn');
   btn.textContent='다음 관문 →';
@@ -1457,6 +1476,20 @@ function render(){
 
   ctx.restore();
   drawImpact();
+  if(paused){
+    ctx.save();
+    ctx.fillStyle='rgba(0,0,0,0.55)';
+    ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#ffdd88';
+    ctx.font='bold '+Math.round(W/14)+'px "맑은 고딕",sans-serif';
+    ctx.textAlign='center';
+    ctx.shadowBlur=20;ctx.shadowColor='#ff8800';
+    ctx.fillText('⏸ 일시정지',W/2,H/2-10);
+    ctx.font=Math.round(W/28)+'px "맑은 고딕",sans-serif';
+    ctx.fillStyle='#aaa';ctx.shadowBlur=0;
+    ctx.fillText('P 키로 재개',W/2,H/2+30);
+    ctx.restore();
+  }
 }
 
 // ── 메인 루프 ──
@@ -1468,7 +1501,7 @@ if (isMobile()) {
 }
 buildStage(1, true);
 (function loop(){
-  update();
+  if(!paused) update();
   render();
   requestAnimationFrame(loop);
 })();
