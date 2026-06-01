@@ -182,6 +182,8 @@ canvas { display:block; max-width:100%; max-height:100vh; }
 /* 하트 소실 흔들림 */
 @keyframes heartShake { 0%,100%{transform:scale(1)} 20%{transform:scale(1.5) rotate(-8deg)} 45%{transform:scale(0.75) rotate(8deg)} 65%{transform:scale(1.2) rotate(-4deg)} }
 #hearts.heart-lost { animation:heartShake 0.5s ease-out; display:inline-block; }
+@keyframes newRecordPop { 0%{opacity:0;transform:translate(-50%,-50%) scale(0.3) rotate(-8deg)} 60%{opacity:1;transform:translate(-50%,-50%) scale(1.08) rotate(2deg)} 100%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(0)} }
+#nr-badge { display:none; position:fixed; top:28%; left:50%; transform:translate(-50%,-50%); background:linear-gradient(135deg,#cc8800,#ffee00); color:#000; font-size:clamp(16px,2.8vw,22px); font-weight:900; padding:10px 28px; border-radius:50px; pointer-events:none; z-index:350; white-space:nowrap; box-shadow:0 0 40px #FFD700cc; letter-spacing:1px; }
 </style>
 </head>
 <body>
@@ -251,6 +253,7 @@ canvas { display:block; max-width:100%; max-height:100vh; }
 </div>
 
 <div id="flash"></div>
+<div id="nr-badge">🏆 신기록 달성!</div>
 
 <div id="explanation">
   <h3>❌ 틀렸어요!</h3>
@@ -281,6 +284,7 @@ canvas { display:block; max-width:100%; max-height:100vh; }
   <div class="fc-stars" id="fc-stars"></div>
   <div class="fc-score" id="fc-score"></div>
   <div class="fc-rank" id="fc-rank"></div>
+  <div id="fc-stage-summary" style="font-size:clamp(11px,1.8vw,15px);color:#aaccff;margin-bottom:16px;text-align:center;line-height:2;"></div>
   <button onclick="restartGame()">🔄 처음부터 다시!</button>
 </div>
 
@@ -707,6 +711,7 @@ const W = 800, H = 500;
 
 // ── 상태 ──
 let stage = 1, lives = 3;
+let stageStarsRecord = [];  // 각 관문의 별점 기록 [1,2,3,2,3]
 let paused = false;
 let score = 0, combo = 0, totalCorrect = 0, stageWrongs = 0, totalStars = 0;
 // playing | question | jumping | falling | impact | dead | clear | gameover | explanation
@@ -1083,6 +1088,9 @@ function showFlash(txt){
 // ── 재시작 ──
 function restartGame() {
   stage=1; lives=3; score=0; combo=0; totalCorrect=0; stageWrongs=0; totalStars=0;
+  stageStarsRecord = [];
+  const nrBadge = document.getElementById('nr-badge');
+  if (nrBadge) nrBadge.style.display = 'none';
   document.getElementById('snum').textContent=1;
   updateHeartsUI();
   updateScoreUI();
@@ -1108,11 +1116,22 @@ function showClear(){
 
   const stars = getStars(stageWrongs);
   const starCount = stageWrongs === 0 ? 3 : (stageWrongs === 1 ? 2 : 1);
+  stageStarsRecord[stage - 1] = starCount;
   totalStars += starCount;
 
   if (stage >= 5) {
+    const prevHi = getHighScore();
     saveHighScore(score);
     updateHighScoreUI();
+    if (score > prevHi) {
+      const nrBadge = document.getElementById('nr-badge');
+      if (nrBadge) {
+        nrBadge.style.display = 'block';
+        nrBadge.style.animation = 'none';
+        void nrBadge.offsetWidth;
+        nrBadge.style.animation = 'newRecordPop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards';
+      }
+    }
     playFinalClear();
     finalClearTimer = 0;
     spawnBigConfetti();
@@ -1125,6 +1144,13 @@ function showClear(){
     else if (score >= 1500) rank = '🥉 분수 수련생';
     else rank = '📚 분수 탐험가';
     document.getElementById('fc-rank').textContent = rank;
+    const summaryEl = document.getElementById('fc-stage-summary');
+    if (summaryEl) {
+      summaryEl.innerHTML = stageThemes.map((t, i) => {
+        const s = stageStarsRecord[i] || 0;
+        return `${t.name}: ${'⭐'.repeat(s)}${'🖤'.repeat(3-s)}`;
+      }).join('&nbsp;&nbsp;');
+    }
     document.getElementById('finalclear').style.display = 'flex';
     return;
   }
