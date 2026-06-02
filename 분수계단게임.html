@@ -199,11 +199,11 @@ canvas { display:block; max-width:100%; max-height:100vh; }
     <span style="font-size:0.88em;color:#666;">틀리면 하트가 줄어요. 하트 3개가 모두 없어지면 게임 오버!</span>
   </div>
   <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;justify-content:center;position:relative;">
-    <div style="font-size:clamp(11px,1.8vw,15px);color:#888;background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:10px;text-align:center;">🗺️ 1관문: 마법의 숲<br><span style="color:#666;font-size:0.85em;">분수의 기본</span></div>
-    <div style="font-size:clamp(11px,1.8vw,15px);color:#888;background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:10px;text-align:center;">🏰 2관문: 고대 성<br><span style="color:#666;font-size:0.85em;">크기 비교</span></div>
-    <div style="font-size:clamp(11px,1.8vw,15px);color:#888;background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:10px;text-align:center;">🌋 3관문: 화염 동굴<br><span style="color:#666;font-size:0.85em;">실생활 문제</span></div>
-    <div style="font-size:clamp(11px,1.8vw,15px);color:#888;background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:10px;text-align:center;">🌌 4관문: 우주 정거장<br><span style="color:#666;font-size:0.85em;">분수 계산</span></div>
-    <div style="font-size:clamp(11px,1.8vw,15px);color:#888;background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:10px;text-align:center;">👑 5관문: 왕의 탑<br><span style="color:#666;font-size:0.85em;">심화 통분</span></div>
+    <div id="fsc-1" style="font-size:clamp(11px,1.8vw,15px);color:#888;background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:10px;text-align:center;border:1px solid transparent;transition:border-color .3s;">🗺️ 1관문: 마법의 숲<br><span style="color:#666;font-size:0.85em;">분수의 기본</span><span class="fsc-stars" style="display:block;font-size:12px;margin-top:3px;letter-spacing:1px;min-height:16px;"></span></div>
+    <div id="fsc-2" style="font-size:clamp(11px,1.8vw,15px);color:#888;background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:10px;text-align:center;border:1px solid transparent;transition:border-color .3s;">🏰 2관문: 고대 성<br><span style="color:#666;font-size:0.85em;">크기 비교</span><span class="fsc-stars" style="display:block;font-size:12px;margin-top:3px;letter-spacing:1px;min-height:16px;"></span></div>
+    <div id="fsc-3" style="font-size:clamp(11px,1.8vw,15px);color:#888;background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:10px;text-align:center;border:1px solid transparent;transition:border-color .3s;">🌋 3관문: 화염 동굴<br><span style="color:#666;font-size:0.85em;">실생활 문제</span><span class="fsc-stars" style="display:block;font-size:12px;margin-top:3px;letter-spacing:1px;min-height:16px;"></span></div>
+    <div id="fsc-4" style="font-size:clamp(11px,1.8vw,15px);color:#888;background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:10px;text-align:center;border:1px solid transparent;transition:border-color .3s;">🌌 4관문: 우주 정거장<br><span style="color:#666;font-size:0.85em;">분수 계산</span><span class="fsc-stars" style="display:block;font-size:12px;margin-top:3px;letter-spacing:1px;min-height:16px;"></span></div>
+    <div id="fsc-5" style="font-size:clamp(11px,1.8vw,15px);color:#888;background:rgba(255,255,255,0.06);padding:8px 16px;border-radius:10px;text-align:center;border:1px solid transparent;transition:border-color .3s;">👑 5관문: 왕의 탑<br><span style="color:#666;font-size:0.85em;">심화 통분</span><span class="fsc-stars" style="display:block;font-size:12px;margin-top:3px;letter-spacing:1px;min-height:16px;"></span></div>
   </div>
   <div style="font-size:clamp(11px,2vw,17px);color:#777;margin-bottom:16px;text-align:center;position:relative;">⭕ 맞아요 (키 1 또는 버튼) &nbsp;|&nbsp; ❌ 틀려요 (키 2 또는 버튼)</div>
   <div style="display:flex;gap:10px;margin-bottom:22px;flex-wrap:wrap;justify-content:center;position:relative;">
@@ -537,6 +537,27 @@ function playLand() {
 function getHighScore() { try { return parseInt(localStorage.getItem('fracStairs_hi')||'0'); } catch(e) { return 0; } }
 function saveHighScore(s) { try { if(s>getHighScore()) localStorage.setItem('fracStairs_hi',s); } catch(e){} }
 function updateHighScoreUI() { document.getElementById('hiscore-val').textContent = getHighScore(); }
+
+function loadStageStarBadges() {
+  const colors = ['transparent','#884400','#888888','#FFD700'];
+  for (let s = 1; s <= 5; s++) {
+    let stars = 0;
+    try { stars = parseInt(localStorage.getItem('fracStairs_stage' + s + '_stars') || '0'); } catch(e) {}
+    const card = document.getElementById('fsc-' + s);
+    if (!card) continue;
+    const starEl = card.querySelector('.fsc-stars');
+    if (starEl) {
+      if (stars > 0) {
+        starEl.textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+        card.style.borderColor = colors[stars] || 'transparent';
+        card.style.color = stars >= 3 ? '#ffdd88' : stars >= 2 ? '#aaa' : '#999';
+      } else {
+        starEl.textContent = ''; card.style.borderColor = 'transparent';
+      }
+    }
+  }
+}
+document.addEventListener('DOMContentLoaded', loadStageStarBadges);
 
 // ── 분수 시각화 ──
 function renderFractionVisual(text) {
@@ -1118,6 +1139,8 @@ function showClear(){
   const starCount = stageWrongs === 0 ? 3 : (stageWrongs === 1 ? 2 : 1);
   stageStarsRecord[stage - 1] = starCount;
   totalStars += starCount;
+  try { const prev=parseInt(localStorage.getItem('fracStairs_stage'+stage+'_stars')||'0'); if(starCount>prev) localStorage.setItem('fracStairs_stage'+stage+'_stars',starCount); } catch(e) {}
+  loadStageStarBadges();
 
   if (stage >= 5) {
     const prevHi = getHighScore();
