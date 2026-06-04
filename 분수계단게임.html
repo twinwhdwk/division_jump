@@ -279,7 +279,10 @@ canvas { display:block; max-width:100%; max-height:100vh; }
   <h2>💀 게임 오버 💀</h2>
   <div class="go-score" id="go-score"></div>
   <p>마법사가 던전에서 쓰러졌습니다...</p>
-  <button onclick="restartGame()">🔄 다시 도전!</button>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+    <button onclick="retryStage()">🔁 이 관문 다시!</button>
+    <button onclick="restartGame()" style="background:#551111;border-color:#aa2222;">🔄 처음부터</button>
+  </div>
 </div>
 
 <div id="finalclear">
@@ -317,6 +320,7 @@ canvas { display:block; max-width:100%; max-height:100vh; }
 })();
 
 let diffMult = 1.0;
+let playStartTime = 0;
 function setFracDiff(e, d) {
   const mults = { easy: 1.6, normal: 1.0, hard: 0.65 };
   diffMult = mults[d] || 1.0;
@@ -326,6 +330,7 @@ function setFracDiff(e, d) {
 
 function dismissStart() {
   document.getElementById('startscreen').style.display = 'none';
+  playStartTime = Date.now();
   initAudio();
   setTimeout(() => startBGM(), 100);
 }
@@ -1129,6 +1134,20 @@ function restartGame() {
   gstate='playing';
 }
 
+function retryStage() {
+  lives = 3;
+  stageWrongs = 0; combo = 0;
+  const nrBadge = document.getElementById('nr-badge');
+  if (nrBadge) nrBadge.style.display = 'none';
+  updateHeartsUI();
+  updateScoreUI();
+  document.getElementById('gameover').style.display = 'none';
+  _parts.length = 0;
+  buildStage(stage, true);
+  startBGM();
+  gstate = 'playing';
+}
+
 // ── 관문 클리어 ──
 function showClear(){
   playStageClear();
@@ -1162,8 +1181,13 @@ function showClear(){
     playFinalClear();
     finalClearTimer = 0;
     spawnBigConfetti();
+    const playMs = Date.now() - playStartTime;
+    const playSecs = Math.floor(playMs / 1000);
+    const fcMm = String(Math.floor(playSecs/60)).padStart(2,'0');
+    const fcSs = String(playSecs % 60).padStart(2,'0');
+    const timeStr = fcMm + ':' + fcSs;
     document.getElementById('fc-stars').textContent = `⭐ ${totalStars} / 15 별`;
-    document.getElementById('fc-score').textContent = `총 점수: ${score}점 · 정답: ${totalCorrect}/25`;
+    document.getElementById('fc-score').textContent = `총 점수: ${score}점 · 정답: ${totalCorrect}/25  |  ⏱ ${timeStr}`;
     let rank = '';
     if (score >= 2800) rank = '🏆 전설의 분수 마스터!';
     else if (score >= 2400) rank = '🥇 분수 왕';
@@ -1197,8 +1221,9 @@ function showClear(){
       setTimeout(()=>{ hgm.style.display='none'; },1800);
     }
   }
+  const stageAcc = playerPos > 0 ? Math.round(totalCorrect / playerPos * 100) : 0;
   document.getElementById('sc-stars').textContent=stars;
-  document.getElementById('sc-score').textContent=`점수: ${score}점${stageWrongs===0?' (+200 퍼펙트 보너스!)':''}`;
+  document.getElementById('sc-score').textContent=`점수: ${score}점${stageWrongs===0?' (+200 퍼펙트 보너스!)':''} | 정답률: ${stageAcc}%`;
   document.getElementById('sc-msg').textContent=`다음은 ${stageThemes[stage].name}!`;
   const btn=document.getElementById('sc-btn');
   btn.textContent='다음 관문 →';
@@ -1572,4 +1597,3 @@ buildStage(1, true);
 })();
 </script>
 </body>
-</html>
