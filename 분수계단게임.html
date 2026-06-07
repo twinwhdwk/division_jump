@@ -337,6 +337,7 @@ function setFracDiff(e, d) {
   diffMult = mults[d] || 1.0;
   document.querySelectorAll('.diff-btn-frac').forEach(b => b.classList.remove('active'));
   e.currentTarget.classList.add('active');
+  renderFracLB();
 }
 
 function dismissStart() {
@@ -558,21 +559,64 @@ function getHighScore() { try { return parseInt(localStorage.getItem('fracStairs
 function saveHighScore(s) { try { if(s>getHighScore()) localStorage.setItem('fracStairs_hi',s); } catch(e){} }
 function updateHighScoreUI() { document.getElementById('hiscore-val').textContent = getHighScore(); }
 
-// ── 리더보드 ──
-let fracLB = [];
-try { fracLB = JSON.parse(localStorage.getItem('fracLB') || '[]'); } catch(e) { fracLB = []; }
-function saveFracLB(score, diffLabel) {
-  fracLB.push({ score, diff: diffLabel, date: new Date().toLocaleDateString('ko-KR', {month:'2-digit',day:'2-digit'}) });
-  fracLB.sort((a,b) => b.score - a.score);
-  fracLB = fracLB.slice(0, 5);
-  try { localStorage.setItem('fracLB', JSON.stringify(fracLB)); } catch(e) {}
+// ── 리더보드 (난이도별 분리) ──
+// 기존 fracLeaderboard / fracLB 데이터를 normal 난이도로 마이그레이션
+(function migrateLB() {
+  try {
+    // fracLeaderboard (원래 단일 키) → normal
+    const oldMain = localStorage.getItem('fracLeaderboard');
+    if (oldMain) {
+      const parsed = JSON.parse(oldMain);
+      if (parsed && parsed.length > 0 && !localStorage.getItem('fracLeaderboard_normal')) {
+        localStorage.setItem('fracLeaderboard_normal', JSON.stringify(parsed));
+      }
+    }
+  } catch(e) {}
+  try {
+    // fracLB (이전 키) → normal
+    const old = localStorage.getItem('fracLB');
+    if (old) {
+      const parsed = JSON.parse(old);
+      if (parsed && parsed.length > 0 && !localStorage.getItem('fracLeaderboard_normal')) {
+        localStorage.setItem('fracLeaderboard_normal', JSON.stringify(parsed));
+      }
+    }
+  } catch(e) {}
+})();
+
+function getCurrentDiff() {
+  const btn = document.querySelector('.diff-btn-frac.active');
+  if (!btn) return 'normal';
+  const d = btn.getAttribute('data-diff');
+  return d || 'normal';
 }
+
+function getLBKey(diff) {
+  return 'fracLeaderboard_' + (diff || getCurrentDiff());
+}
+
+function loadFracLB(diff) {
+  try { return JSON.parse(localStorage.getItem(getLBKey(diff)) || '[]'); } catch(e) { return []; }
+}
+
+function saveFracLB(score, diffLabel) {
+  const diff = getCurrentDiff();
+  let lb = loadFracLB(diff);
+  lb.push({ score, diff: diffLabel, date: new Date().toLocaleDateString('ko-KR', {month:'2-digit',day:'2-digit'}) });
+  lb.sort((a,b) => b.score - a.score);
+  lb = lb.slice(0, 5);
+  try { localStorage.setItem(getLBKey(diff), JSON.stringify(lb)); } catch(e) {}
+}
+
 function renderFracLB() {
   const el = document.getElementById('frac-lb-panel');
-  if (!el || fracLB.length === 0) return;
+  const diff = getCurrentDiff();
+  const lb = loadFracLB(diff);
+  if (!el || lb.length === 0) { if(el) el.style.display='none'; return; }
   const medals = ['🥇','🥈','🥉','4위','5위'];
-  let html = '<div class="lb-title">🏆 TOP 5 기록</div>';
-  fracLB.forEach((e,i) => {
+  const diffNames = { easy:'🌱 쉬움', normal:'⚔️ 보통', hard:'🔥 어려움' };
+  let html = `<div class="lb-title">🏆 TOP 5 기록 (${diffNames[diff]||diff})</div>`;
+  lb.forEach((e,i) => {
     html += `<div class="lb-row"><span class="lb-rank">${medals[i]}</span><span class="lb-score">${e.score}점</span><span class="lb-diff">${e.diff||''} ${e.date||''}</span></div>`;
   });
   el.innerHTML = html;
@@ -584,12 +628,18 @@ function loadStageStarBadges() {
   for (let s = 1; s <= 5; s++) {
     let stars = 0;
     try { stars = parseInt(localStorage.getItem('fracStairs_stage' + s + '_stars') || '0'); } catch(e) {}
+    let bestScore = 0;
+    try { bestScore = parseInt(localStorage.getItem('fracStageScore_' + s) || '0'); } catch(e) {}
     const card = document.getElementById('fsc-' + s);
     if (!card) continue;
     const starEl = card.querySelector('.fsc-stars');
     if (starEl) {
       if (stars > 0) {
-        starEl.textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+        let innerHtml = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+        if (bestScore > 0) {
+          innerHtml += `<span style="display:block;color:#888;font-size:10px;margin-top:2px;">최고: ${bestScore}점</span>`;
+        }
+        starEl.innerHTML = innerHtml;
         card.style.borderColor = colors[stars] || 'transparent';
         card.style.color = stars >= 3 ? '#ffdd88' : stars >= 2 ? '#aaa' : '#999';
         if (!card.classList.contains('fsc-clickable')) {
@@ -798,6 +848,7 @@ let stage = 1, lives = 3;
 let stageStarsRecord = [];  // 각 관문의 별점 기록 [1,2,3,2,3]
 let paused = false;
 let score = 0, combo = 0, totalCorrect = 0, stageWrongs = 0, totalStars = 0;
+let perfectStreakThisGame = 0;  // 연속 퍼펙트 클리어 관문 수
 // playing | question | jumping | falling | impact | dead | clear | gameover | explanation
 let gstate = 'playing';
 
@@ -1088,6 +1139,7 @@ function answer(userTrue) {
   } else {
     combo = 0;
     stageWrongs++;
+    perfectStreakThisGame = 0;
     playWrongSound();
     doJump(false);
   }
@@ -1169,10 +1221,41 @@ function showFlash(txt){
   el._t=setTimeout(()=>el.style.display='none',700);
 }
 
+// ── 퍼펙트 스트릭 팝업 ──
+function showPerfectStreakPopup(msg) {
+  const el = document.createElement('div');
+  el.textContent = msg;
+  el.style.cssText = [
+    'position:fixed', 'top:50%', 'left:50%',
+    'transform:translate(-50%,-50%) scale(0.4)',
+    'background:linear-gradient(135deg,#2a1a00,#5a3800)',
+    'color:#FFD700', 'font-size:clamp(18px,3.5vw,28px)',
+    'font-weight:900', 'padding:18px 36px',
+    'border-radius:20px', 'border:3px solid #FFD700',
+    'box-shadow:0 0 60px #FFD70099',
+    'z-index:600', 'pointer-events:none',
+    'text-align:center', 'white-space:nowrap',
+    'transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.35s',
+    'opacity:0'
+  ].join(';');
+  document.body.appendChild(el);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      el.style.transform = 'translate(-50%,-50%) scale(1)';
+      el.style.opacity = '1';
+    });
+  });
+  setTimeout(() => {
+    el.style.transform = 'translate(-50%,-60%) scale(0.85)';
+    el.style.opacity = '0';
+    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 400);
+  }, 2000);
+}
+
 // ── 재시작 ──
 function restartGame() {
   stage=1; lives=3; score=0; combo=0; totalCorrect=0; stageWrongs=0; totalStars=0;
-  stageStarsRecord = [];
+  stageStarsRecord = []; perfectStreakThisGame = 0;
   const nrBadge = document.getElementById('nr-badge');
   if (nrBadge) nrBadge.style.display = 'none';
   document.getElementById('snum').textContent=1;
@@ -1217,9 +1300,11 @@ function showClear(){
   stageStarsRecord[stage - 1] = starCount;
   totalStars += starCount;
   try { const prev=parseInt(localStorage.getItem('fracStairs_stage'+stage+'_stars')||'0'); if(starCount>prev) localStorage.setItem('fracStairs_stage'+stage+'_stars',starCount); } catch(e) {}
+  try { const prevSc=parseInt(localStorage.getItem('fracStageScore_'+stage)||'0'); if(score>prevSc) localStorage.setItem('fracStageScore_'+stage, score); } catch(e) {}
   loadStageStarBadges();
 
   if (stage >= 5) {
+    if(stageWrongs===0) perfectStreakThisGame++;
     const prevHi = getHighScore();
     saveHighScore(score);
     updateHighScoreUI();
@@ -1253,18 +1338,28 @@ function showClear(){
     document.getElementById('fc-rank').textContent = rank;
     const summaryEl = document.getElementById('fc-stage-summary');
     if (summaryEl) {
-      summaryEl.innerHTML = stageThemes.map((t, i) => {
+      let summaryHtml = stageThemes.map((t, i) => {
         const s = stageStarsRecord[i] || 0;
         return `${t.name}: ${'⭐'.repeat(s)}${'🖤'.repeat(3-s)}`;
       }).join('&nbsp;&nbsp;');
+      const perfectStageCount = stageStarsRecord.filter(s => s === 3).length;
+      summaryHtml += `<br><span style="font-size:13px;color:#FFD700;">퍼펙트 관문: ${perfectStageCount}/5</span>`;
+      if (perfectStageCount === 5) {
+        summaryHtml += `&nbsp;<span style="font-size:13px;color:#FFD700;font-weight:900;">👑 완벽한 클리어! 퍼펙트 마스터!</span>`;
+      }
+      summaryEl.innerHTML = summaryHtml;
     }
     document.getElementById('finalclear').style.display = 'flex';
+    if (perfectStreakThisGame === 5 || (stageStarsRecord.filter(s=>s===3).length === 5)) {
+      setTimeout(()=>showPerfectStreakPopup('👑 완벽한 클리어! 퍼펙트 마스터!'), 800);
+    }
     return;
   }
 
   const theme = stageThemes[stage-1];
   document.getElementById('sc-title').textContent=`🎉 ${theme.name} 통과!${stageWrongs===0?' 🌟 완벽!':''}`;
   if(stageWrongs===0){
+    perfectStreakThisGame++;
     score+=200;updateScoreUI();
     if(lives<3){
       lives++;
@@ -1275,6 +1370,11 @@ function showClear(){
       void hgm.offsetWidth;
       hgm.style.animation='heartGainAnim 1.8s ease-out forwards';
       setTimeout(()=>{ hgm.style.display='none'; },1800);
+    }
+    if(perfectStreakThisGame===2){
+      setTimeout(()=>showPerfectStreakPopup('🔥 2관문 연속 퍼펙트!'), 400);
+    } else if(perfectStreakThisGame===3){
+      setTimeout(()=>showPerfectStreakPopup('⚡ 3관문 연속 퍼펙트!'), 400);
     }
   }
   const stageAcc = playerPos > 0 ? Math.round(totalCorrect / playerPos * 100) : 0;
